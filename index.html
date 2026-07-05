@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wellsound</title>
+    <meta name="description" content="Wellsound hearing care website" />
+    <link rel="stylesheet" href="assets/site.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="Wellsound home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span data-text="brand.name">Wellsound</span>
+      </a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="#services">บริการ</a>
+        <a href="#packages">แพ็กเกจ</a>
+        <a href="#contact">ติดต่อ</a>
+        <a class="admin-link" href="admin/">Dashboard</a>
+      </nav>
+    </header>
+
+    <main id="home">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow" data-text="brand.tagline">Hearing care made clear</p>
+          <h1 data-text="hero.headline">ดูแลการได้ยินให้ชีวิตกลับมาชัดเจน</h1>
+          <p class="lead" data-text="hero.subheadline"></p>
+          <div class="hero-actions">
+            <a class="button primary" href="#contact" data-text="hero.ctaText">นัดประเมินการได้ยิน</a>
+            <a class="button ghost" href="#services" data-text="hero.secondaryCtaText">ดูบริการ</a>
+          </div>
+        </div>
+        <div class="sound-panel" aria-label="Wellsound sound clarity visual">
+          <div class="portrait-orbit">
+            <div class="ear-shape"></div>
+            <div class="wave wave-one"></div>
+            <div class="wave wave-two"></div>
+            <div class="wave wave-three"></div>
+          </div>
+          <div class="meter" aria-hidden="true">
+            <span style="--h: 42%"></span>
+            <span style="--h: 68%"></span>
+            <span style="--h: 88%"></span>
+            <span style="--h: 55%"></span>
+            <span style="--h: 74%"></span>
+            <span style="--h: 48%"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats" data-list="stats"></section>
+
+      <section class="section" id="services">
+        <div class="section-heading">
+          <p class="eyebrow">Services</p>
+          <h2>บริการหลัก</h2>
+        </div>
+        <div class="grid three" data-list="services"></div>
+      </section>
+
+      <section class="section tone" id="packages">
+        <div class="section-heading">
+          <p class="eyebrow">Plans</p>
+          <h2>แพ็กเกจดูแลการได้ยิน</h2>
+        </div>
+        <div class="grid three" data-list="packages"></div>
+      </section>
+
+      <section class="section split">
+        <div>
+          <p class="eyebrow">Trust</p>
+          <h2>เสียงจากผู้รับบริการ</h2>
+        </div>
+        <div class="testimonial-list" data-list="testimonials"></div>
+      </section>
+
+      <section class="contact-band" id="contact">
+        <div>
+          <p class="eyebrow">Contact</p>
+          <h2>นัดหมายหรือสอบถามเพิ่มเติม</h2>
+          <p data-text="brand.description"></p>
+        </div>
+        <div class="contact-card">
+          <a data-contact="phone" href="tel:020000000">02-000-0000</a>
+          <a data-contact="line" href="#">@wellsound</a>
+          <a data-contact="email" href="mailto:hello@wellsound.example">hello@wellsound.example</a>
+          <p data-contact="address">กรุงเทพมหานคร ประเทศไทย</p>
+          <p data-contact="hours">เปิดทุกวัน 09:00-18:00</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span data-text="brand.name">Wellsound</span>
+      <span>Dashboard: <a href="admin/">แก้ไขเนื้อหาเว็บไซต์</a></span>
+    </footer>
+
+    <script src="assets/app.js"></script>
+  </body>
+</html>
