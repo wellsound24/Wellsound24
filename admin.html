@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a0a">
+  <title>แดชบอร์ดแก้ไขเว็บไซต์ทุกจุด | Wellsound24</title>
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <section class="login-screen" id="login-screen">
+    <form class="login-card" id="login-form">
+      <img src="assets/logo.png" alt="ช่องสำหรับใส่โลโก้">
+      <p class="kicker">WELLSOUND24 ADMIN</p>
+      <h1>เข้าสู่แดชบอร์ด</h1>
+      <p>แก้ข้อความ รูปภาพ เมนู สี และการจัดวางได้จากหน้าเดียว</p>
+      <label>รหัสเข้าใช้งาน<input id="pin-input" type="password" inputmode="numeric" autocomplete="current-password" placeholder="รหัสเริ่มต้น 2468" required></label>
+      <button type="submit" class="primary-button">เข้าสู่ระบบ</button>
+      <p class="login-message" id="login-message" aria-live="polite"></p>
+      <small>รหัสเริ่มต้น: <strong>2468</strong></small>
+    </form>
+  </section>
+
+  <div class="dashboard is-hidden" id="dashboard">
+    <aside class="sidebar">
+      <a href="index.html" class="admin-brand" target="_blank" rel="noopener">
+        <img src="assets/logo.png" alt="ช่องสำหรับใส่โลโก้">
+        <span><strong>Wellsound24</strong><small>Full Website Editor</small></span>
+      </a>
+      <nav class="admin-nav" aria-label="หมวดการแก้ไข">
+        <button class="nav-item is-active" data-panel="visual">✦ แก้จากตัวอย่าง</button>
+        <button class="nav-item" data-panel="layout">☷ โครงสร้างหน้าเว็บ</button>
+        <button class="nav-item" data-panel="general">⌂ ข้อมูลทั่วไป</button>
+        <button class="nav-item" data-panel="header">☰ หัวเว็บและเมนู</button>
+        <button class="nav-item" data-panel="hero">▣ หน้าแรก</button>
+        <button class="nav-item" data-panel="services">▦ บริการ</button>
+        <button class="nav-item" data-panel="why">✓ จุดเด่น</button>
+        <button class="nav-item" data-panel="portfolio">▧ ผลงาน</button>
+        <button class="nav-item" data-panel="contact">☎ ติดต่อและฟอร์ม</button>
+        <button class="nav-item" data-panel="footer">— ท้ายเว็บไซต์</button>
+        <button class="nav-item" data-panel="appearance">◐ สีและรูปแบบ</button>
+        <button class="nav-item" data-panel="backup">⇩ บันทึกและสำรอง</button>
+      </nav>
+      <div class="sidebar-footer"><button type="button" class="ghost-button" id="logout-button">ออกจากระบบ</button></div>
+    </aside>
+
+    <main class="admin-main">
+      <header class="topbar">
+        <div>
+          <p class="kicker">FULL WEBSITE EDITOR</p>
+          <h1 id="panel-title">แก้จากตัวอย่าง</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-text-button" type="button" id="undo-button" title="ย้อนกลับ">↶ <span>ย้อนกลับ</span></button>
+          <button class="icon-text-button" type="button" id="redo-button" title="ทำซ้ำ">↷ <span>ทำซ้ำ</span></button>
+          <a class="ghost-button link-button" href="index.html" target="_blank" rel="noopener">เปิดหน้าเว็บ</a>
+          <button class="primary-button" type="button" id="save-button">บันทึกการแก้ไข</button>
+        </div>
+      </header>
+      <div class="status-bar" id="status-bar" role="status">พร้อมแก้ไข</div>
+
+      <div class="workspace">
+        <section class="editor-area">
+          <form id="content-form" autocomplete="off">
+            <div class="panel is-active" data-panel-content="visual">
+              <div class="welcome-card">
+                <div class="welcome-icon">✦</div>
+                <div><h2>คลิกจุดที่ต้องการแก้จากตัวอย่าง</h2><p>คลิกข้อความ รูปภาพ ปุ่ม หรือเมนูในตัวอย่างด้านขวา ระบบจะเปิดช่องแก้ไขที่ตรงกันให้ทันที</p></div>
+              </div>
+              <div class="selected-card" id="selected-card">
+                <span class="selected-badge">ยังไม่ได้เลือก</span>
+                <h3 id="selected-title">เลือกจุดจากตัวอย่างเว็บไซต์</h3>
+                <p id="selected-path">ตัวอย่าง: คลิกหัวข้อ “ยกระดับทุกงาน” เพื่อแก้ข้อความ</p>
+                <button type="button" class="secondary-button is-hidden" id="selected-jump-button">ไปยังช่องแก้ไขข้อความ</button>
+
+                <div class="text-style-editor is-hidden" id="text-style-editor">
+                  <div class="text-style-head">
+                    <div><strong>ปรับขนาดและตำแหน่ง</strong><small>ลากข้อความในตัวอย่างด้านขวาเพื่อย้ายได้ทันที</small></div>
+                    <div class="style-device-tabs" aria-label="เลือกขนาดหน้าจอ">
+                      <button type="button" data-style-device="desktop" class="is-active">คอม</button>
+                      <button type="button" data-style-device="tablet">แท็บเล็ต</button>
+                      <button type="button" data-style-device="mobile">มือถือ</button>
+                    </div>
+                  </div>
+                  <div class="style-control-grid">
+                    <label class="field">ขนาดข้อความ (px)<input type="number" min="8" max="500" step="1" data-text-style="fontSize" placeholder="อัตโนมัติ"></label>
+                    <label class="field">ความกว้าง (px)<input type="number" min="0" max="3000" step="1" data-text-style="width" placeholder="0 = อัตโนมัติ"></label>
+                    <label class="field">ย้ายซ้าย/ขวา X (px)<input type="number" min="-5000" max="5000" step="1" data-text-style="x"></label>
+                    <label class="field">ย้ายขึ้น/ลง Y (px)<input type="number" min="-5000" max="5000" step="1" data-text-style="y"></label>
+                    <label class="field">การจัดข้อความ<select data-text-style="textAlign"><option value="">ตามค่าเดิม</option><option value="left">ชิดซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ชิดขวา</option></select></label>
+                    <label class="field">ความหนา<select data-text-style="fontWeight"><option value="">ตามค่าเดิม</option><option value="300">บาง</option><option value="400">ปกติ</option><option value="500">กลาง</option><option value="600">หนา</option><option value="700">หนามาก</option><option value="800">หนาพิเศษ</option><option value="900">หนาที่สุด</option></select></label>
+                    <label class="field">ระยะบรรทัด<input type="number" min="0.7" max="3" step="0.05" data-text-style="lineHeight" placeholder="อัตโนมัติ"></label>
+                    <label class="field">ระยะห่างตัวอักษร (px)<input type="number" min="-10" max="30" step="0.1" data-text-style="letterSpacing"></label>
+                    <label class="field">หมุนข้อความ (องศา)<input type="number" min="-180" max="180" step="1" data-text-style="rotation"></label>
+                    <label class="field">สีข้อความ<input type="text" data-text-style="color" placeholder="#ffffff หรือเว้นว่าง"></label>
+                  </div>
+                  <div class="text-style-actions">
+                    <button type="button" class="secondary-button" id="reset-text-position">คืนตำแหน่ง</button>
+                    <button type="button" class="danger-text" id="reset-text-style">คืนรูปแบบทั้งหมดของจุดนี้</button>
+                  </div>
+                </div>
+              </div>
+              <div class="tips-grid">
+                <article><strong>1. คลิก</strong><span>เลือกจุดจากตัวอย่าง</span></article>
+                <article><strong>2. แก้ไข</strong><span>พิมพ์ข้อความหรือเลือกรูป</span></article>
+                <article><strong>3. บันทึก</strong><span>กดปุ่มด้านบนเมื่อเสร็จ</span></article>
+              </div>
+            </div>
+
+            <div class="panel" data-panel-content="layout">
+              <div class="panel-heading"><h2>ลำดับและการแสดงผล</h2><p>เปิด/ปิดแต่ละส่วน และเลื่อนลำดับหน้าเว็บขึ้นหรือลง</p></div>
+              <div id="section-order-fields" class="section-order-list"></div>
+            </div>
+
+            <div class="panel" data-panel-content="general">
+              <div class="panel-heading"><h2>ข้อมูลเว็บไซต์และ SEO</h2><p>ชื่อบนแท็บ คำอธิบาย และข้อมูลติดต่อหลัก</p></div>
+              <div class="form-grid two-columns">
+                <label class="field full-width">ชื่อเว็บไซต์บนแท็บ<input type="text" data-path="site.title"></label>
+                <label class="field full-width">คำอธิบายสำหรับ Google<textarea rows="3" data-path="site.description"></textarea></label>
+                <label class="field">เบอร์โทรศัพท์<input type="tel" data-path="site.phone"></label>
+                <label class="field">อีเมล<input type="email" data-path="site.email" placeholder="example@email.com"></label>
+                <label class="field">LINE ID<input type="text" data-path="site.lineId" placeholder="เช่น wellsound24 หรือ @wellsound24"><small>ใส่ได้ทั้งแบบ wellsound24 หรือ @wellsound24 ระบบจะสร้างลิงก์เพิ่มเพื่อนให้อัตโนมัติ</small></label>
+                <label class="field">เบอร์โทรที่ผูกกับ LINE<input type="tel" inputmode="tel" data-path="site.linePhone" placeholder="เช่น 0932614296"><small>ใช้เป็นข้อมูลสำรองเท่านั้น แนะนำให้ใช้ LINE ID หรือลิงก์เพิ่มเพื่อนโดยตรง</small></label>
+                <label class="field full-width">ลิงก์ LINE โดยตรง (ถ้ามี)<input type="url" data-path="site.lineUrl" placeholder="เช่น https://line.me/R/ti/p/@ชื่อไลน์ หรือ https://lin.ee/xxxx"><small>ถ้าใส่ช่องนี้ ระบบจะใช้ลิงก์นี้ก่อน LINE ID และเบอร์โทร</small></label>
+                <label class="field full-width">ลิงก์เพจ Facebook<input type="text" data-path="site.facebookUrl" placeholder="เช่น https://facebook.com/ชื่อเพจ หรือชื่อเพจ"><small>ใส่ลิงก์เต็ม หรือชื่อผู้ใช้ของเพจ Facebook ได้</small></label>
+                <label class="field full-width">พื้นที่ให้บริการ/ที่อยู่<textarea rows="2" data-path="site.address"></textarea></label>
+              </div>
+              <div class="image-editor" data-image-path="site.favicon">
+                <div class="image-preview logo-preview"></div>
+                <div><h3>ไอคอนบนแท็บเว็บไซต์</h3><p>แนะนำรูปสี่เหลี่ยม PNG ขนาด 512 × 512</p><div class="image-actions"><label class="upload-button">เลือกรูป<input type="file" accept="image/*" hidden></label><button type="button" class="danger-text remove-image">คืนค่าเดิม</button></div></div>
+              </div>
+            </div>
+
+            <div class="panel" data-panel-content="header">
+              <div class="panel-heading"><h2>หัวเว็บไซต์และเมนู</h2><p>จัดการโลโก้ เมนู ปุ่ม และรูปแบบแถบด้านบน</p></div>
+              <div class="toggle-grid">
+                <label class="toggle-card"><input type="checkbox" data-path="header.visible"><span><strong>แสดงหัวเว็บไซต์</strong><small>ปิดเพื่อซ่อนเมนูด้านบนทั้งหมด</small></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="header.sticky"><span><strong>ตรึงเมนูด้านบน</strong><small>เมนูตามหน้าจอขณะเลื่อน</small></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="header.showCta"><span><strong>แสดงปุ่มพิเศษบนเมนู</strong><small>เหมาะสำหรับปุ่มขอใบเสนอราคา</small></span></label>
+              </div>
+              <div class="form-grid two-columns subsection-grid">
+                <label class="field">ขนาดโลโก้ (px)<input type="number" min="48" max="180" data-path="header.logoSize"></label>
+                <label class="field">ความทึบพื้นหลังเมนู (%)<input type="number" min="0" max="100" data-path="header.backgroundOpacity"></label>
+                <label class="field">ข้อความปุ่มพิเศษ<input type="text" data-path="header.ctaText"></label>
+                <label class="field">ลิงก์ปุ่มพิเศษ<input type="text" data-path="header.ctaLink"></label>
+              </div>
+              <div class="image-editor" data-image-path="site.logo">
+                <div class="image-preview logo-preview"></div>
+                <div><h3>ช่องสำหรับใส่โลโก้</h3><p>กด “เลือกรูป” เพื่อใส่โลโก้ของคุณ ขนาดช่องยังเท่าเดิมทั้งหัวเว็บและท้ายเว็บ</p><div class="image-actions"><label class="upload-button">เลือกรูป<input type="file" accept="image/*" hidden></label><button type="button" class="danger-text remove-image">คืนค่าเดิม</button></div></div>
+              </div>
+              <div class="list-heading"><div><h3>รายการเมนู</h3><p>เพิ่ม ลบ และเรียงเมนูด้านบนได้</p></div><button type="button" class="secondary-button" data-add-list="header.menu">+ เพิ่มเมนู</button></div>
+              <div id="menu-fields" class="sortable-list"></div>
+            </div>
+
+            <div class="panel" data-panel-content="hero">
+              <div class="panel-heading"><h2>หน้าแรกและภาพปก</h2><p>แก้ข้อความ ปุ่ม ตำแหน่ง และรูปปกทั้งหมด</p></div>
+              <div class="form-grid two-columns">
+                <label class="field full-width">ข้อความเล็กด้านบน<input type="text" data-path="hero.eyebrow"></label>
+                <label class="field">หัวข้อบรรทัดแรก<input type="text" data-path="hero.titleLine1"></label>
+                <label class="field">หัวข้อสีทอง<input type="text" data-path="hero.titleLine2"></label>
+                <label class="field full-width">คำอธิบาย<textarea rows="4" data-path="hero.description"></textarea></label>
+                <label class="field">ข้อความปุ่มหลัก<input type="text" data-path="hero.primaryButton"></label>
+                <label class="field">ลิงก์ปุ่มหลัก<input type="text" data-path="hero.primaryLink"></label>
+                <label class="field">ข้อความปุ่มรอง<input type="text" data-path="hero.secondaryButton"></label>
+                <label class="field">ลิงก์ปุ่มรอง<input type="text" data-path="hero.secondaryLink"></label>
+                <label class="field">ตำแหน่งข้อความ<select data-path="hero.alignment"><option value="left">ซ้าย</option><option value="center">กลาง</option><option value="right">ขวา</option></select></label>
+                <label class="field">ตำแหน่งรูป<select data-path="hero.imagePosition"><option value="left center">ซ้าย</option><option value="center center">กลาง</option><option value="right center">ขวา</option><option value="center top">ด้านบน</option><option value="center bottom">ด้านล่าง</option></select></label>
+                <label class="field">ความมืดทับรูป (%)<input type="range" min="0" max="95" data-path="hero.overlayOpacity"><output data-output-for="hero.overlayOpacity"></output></label>
+                <label class="field">ความสูงส่วนหน้าแรก (vh)<input type="number" min="60" max="130" data-path="hero.minHeight"></label>
+                <label class="field">ขนาดหัวข้อ (%)<input type="number" min="60" max="150" data-path="hero.titleSize"></label>
+                <label class="field">ความกว้างข้อความ (px)<input type="number" min="600" max="1400" data-path="hero.contentWidth"></label>
+              </div>
+              <div class="toggle-grid subsection-grid">
+                <label class="toggle-card"><input type="checkbox" data-path="hero.showPrimaryButton"><span><strong>แสดงปุ่มหลัก</strong></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="hero.showSecondaryButton"><span><strong>แสดงปุ่มรอง</strong></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="hero.showLights"><span><strong>แสดงเอฟเฟกต์แสง</strong></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="hero.showStats"><span><strong>แสดงช่องจุดเด่น</strong></span></label>
+              </div>
+              <div class="image-editor" data-image-path="hero.image">
+                <div class="image-preview"></div>
+                <div><h3>ภาพปกหน้าแรก</h3><p>แนะนำภาพแนวนอน 1920 × 1080 พิกเซล</p><div class="image-actions"><label class="upload-button">เลือกรูป<input type="file" accept="image/*" hidden></label><button type="button" class="danger-text remove-image">ลบรูป</button></div></div>
+              </div>
+              <div class="list-heading"><div><h3>ช่องจุดเด่นใต้ภาพปก</h3><p>เพิ่มหรือลดจำนวนได้ตามต้องการ</p></div><button type="button" class="secondary-button" data-add-list="stats">+ เพิ่มช่อง</button></div>
+              <div id="stats-fields" class="sortable-list"></div>
+            </div>
+
+            <div class="panel" data-panel-content="services">
+              <div class="panel-heading"><h2>บริการของเรา</h2><p>แก้หัวข้อ เพิ่มบริการ ลบบริการ และจัดลำดับได้</p></div>
+              <div class="form-grid two-columns">
+                <label class="field">ข้อความเล็กด้านบน<input type="text" data-path="servicesSection.eyebrow"></label>
+                <label class="field">หัวข้อหมวด<input type="text" data-path="servicesSection.title"></label>
+                <label class="field full-width">คำอธิบายหมวด<textarea rows="3" data-path="servicesSection.description"></textarea></label>
+                <label class="field">จำนวนคอลัมน์<select data-path="servicesSection.columns"><option value="1">1 คอลัมน์</option><option value="2">2 คอลัมน์</option><option value="3">3 คอลัมน์</option><option value="4">4 คอลัมน์</option></select></label>
+                <label class="field">พื้นหลังหมวด<select data-path="servicesSection.background"><option value="default">พื้นหลังไล่สี</option><option value="soft">ดำอ่อน</option><option value="card">สีเดียวกับการ์ด</option></select></label>
+              </div>
+              <div class="list-heading"><div><h3>รายการบริการ</h3><p>ไอคอนสามารถใช้สัญลักษณ์หรืออีโมจิได้</p></div><button type="button" class="secondary-button" data-add-list="services">+ เพิ่มบริการ</button></div>
+              <div id="service-fields" class="sortable-list"></div>
+            </div>
+
+            <div class="panel" data-panel-content="why">
+              <div class="panel-heading"><h2>ส่วนจุดเด่นของบริษัท</h2><p>แก้ข้อความ รายการ และภาพด้านขวา</p></div>
+              <div class="form-grid two-columns">
+                <label class="field full-width">ข้อความเล็กด้านบน<input type="text" data-path="why.eyebrow"></label>
+                <label class="field">หัวข้อบรรทัดแรก<input type="text" data-path="why.titleLine1"></label>
+                <label class="field">หัวข้อบรรทัดสอง<input type="text" data-path="why.titleLine2"></label>
+                <label class="field full-width">คำอธิบาย<textarea rows="4" data-path="why.description"></textarea></label>
+                <label class="field">ภาพด้านขวา<select data-path="why.visualType"><option value="stage">ภาพเวทีจำลอง</option><option value="image">ใช้รูปที่อัปโหลด</option></select></label>
+                <label class="field">ตำแหน่งรูป<select data-path="why.imagePosition"><option value="left center">ซ้าย</option><option value="center center">กลาง</option><option value="right center">ขวา</option><option value="center top">ด้านบน</option><option value="center bottom">ด้านล่าง</option></select></label>
+                <label class="field">ข้อความบนจอบรรทัด 1<input type="text" data-path="why.screenLine1"></label>
+                <label class="field">ข้อความบนจอบรรทัด 2<input type="text" data-path="why.screenLine2"></label>
+              </div>
+              <div class="image-editor" data-image-path="why.image">
+                <div class="image-preview"></div>
+                <div><h3>รูปด้านขวา</h3><p>เลือก “ใช้รูปที่อัปโหลด” ด้านบนเพื่อแสดงรูปนี้</p><div class="image-actions"><label class="upload-button">เลือกรูป<input type="file" accept="image/*" hidden></label><button type="button" class="danger-text remove-image">ลบรูป</button></div></div>
+              </div>
+              <div class="list-heading"><div><h3>รายการจุดเด่น</h3><p>แต่ละบรรทัดจะแสดงพร้อมเครื่องหมายถูก</p></div><button type="button" class="secondary-button" data-add-list="why.items">+ เพิ่มรายการ</button></div>
+              <div id="why-fields" class="sortable-list"></div>
+            </div>
+
+            <div class="panel" data-panel-content="portfolio">
+              <div class="panel-heading"><h2>ผลงานและประเภทงาน</h2><p>เพิ่มรูปผลงานได้ไม่จำกัด พร้อมชื่อและลิงก์</p></div>
+              <div class="form-grid two-columns">
+                <label class="field">ข้อความเล็กด้านบน<input type="text" data-path="portfolioSection.eyebrow"></label>
+                <label class="field">หัวข้อหมวด<input type="text" data-path="portfolioSection.title"></label>
+                <label class="field full-width">คำอธิบายหมวด<input type="text" data-path="portfolioSection.description"></label>
+                <label class="field">จำนวนคอลัมน์<select data-path="portfolioSection.columns"><option value="1">1 คอลัมน์</option><option value="2">2 คอลัมน์</option><option value="3">3 คอลัมน์</option><option value="4">4 คอลัมน์</option></select></label>
+              </div>
+              <div class="list-heading"><div><h3>รายการผลงาน</h3><p>อัปโหลดรูปและเรียงลำดับได้</p></div><button type="button" class="secondary-button" data-add-list="portfolio">+ เพิ่มผลงาน</button></div>
+              <div id="portfolio-fields" class="sortable-list portfolio-edit-list"></div>
+            </div>
+
+            <div class="panel" data-panel-content="contact">
+              <div class="panel-heading"><h2>ติดต่อและแบบฟอร์ม</h2><p>แก้ข้อความ ปุ่ม ช่องกรอกข้อมูล และประเภทงาน</p></div>
+              <div class="form-grid two-columns">
+                <label class="field full-width">ข้อความเล็กด้านบน<input type="text" data-path="contact.eyebrow"></label>
+                <label class="field full-width">หัวข้อ<input type="text" data-path="contact.title"></label>
+                <label class="field full-width">คำอธิบาย<textarea rows="4" data-path="contact.description"></textarea></label>
+                <label class="field full-width">เบอร์โทรสำหรับปุ่ม “โทรสอบถาม”<input type="tel" inputmode="tel" data-path="site.phone" placeholder="เช่น 0932614296"><small>เมื่อแก้ไขแล้ว ปุ่มโทรทุกจุดในเว็บไซต์จะใช้เบอร์นี้</small></label>
+                <label class="field">ข้อความบนปุ่มโทร<input type="text" data-path="contact.phoneButton"></label>
+                <label class="field">ข้อความปุ่ม LINE<input type="text" data-path="contact.lineButton"></label>
+                <label class="field">ข้อความปุ่ม Facebook<input type="text" data-path="contact.facebookButton"></label>
+                <label class="field">LINE ID สำหรับปุ่ม “คุยผ่าน LINE”<input type="text" data-path="site.lineId" placeholder="เช่น wellsound24 หรือ @wellsound24"><small>แนะนำให้ใส่ LINE ID เพื่อให้ปุ่มเปิด LINE ได้ตรงบัญชี</small></label>
+                <label class="field">เบอร์โทรที่ผูกกับ LINE<input type="tel" inputmode="tel" data-path="site.linePhone" placeholder="เช่น 0932614296"><small>ใช้เป็นข้อมูลสำรองเท่านั้น แนะนำให้ใช้ LINE ID หรือลิงก์เพิ่มเพื่อนโดยตรง</small></label>
+                <label class="field full-width">ลิงก์ LINE โดยตรง (ถ้ามี)<input type="url" data-path="site.lineUrl" placeholder="เช่น https://line.me/R/ti/p/@ชื่อไลน์ หรือ https://lin.ee/xxxx"><small>ถ้าใส่ลิงก์นี้ ระบบจะใช้ก่อน LINE ID และเบอร์โทร</small></label>
+                <div class="field full-width">
+                  <button type="button" class="secondary-button" id="test-line-link-button">ทดสอบลิงก์ LINE</button>
+                  <small>กดเพื่อทดลองเปิดหน้าสำหรับเพิ่มเพื่อน LINE ตามข้อมูลที่กรอกไว้</small>
+                </div>
+                <label class="field full-width">ลิงก์เพจ Facebook สำหรับปุ่มติดต่อ<input type="text" data-path="site.facebookUrl" placeholder="เช่น https://facebook.com/ชื่อเพจ หรือชื่อเพจ"><small>กดปุ่มแล้วจะเปิดเพจ Facebook ในแท็บใหม่</small></label>
+                <div class="field full-width">
+                  <button type="button" class="secondary-button" id="test-facebook-link-button">ทดสอบลิงก์ Facebook</button>
+                  <small>กดเพื่อทดลองเปิดเพจ Facebook ตามข้อมูลที่กรอกไว้</small>
+                </div>
+                <label class="field full-width">ข้อความหมายเหตุ<input type="text" data-path="contact.note"></label>
+              </div>
+              <div class="toggle-grid subsection-grid">
+                <label class="toggle-card"><input type="checkbox" data-path="contact.showPhoneButton"><span><strong>แสดงปุ่มโทร</strong></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="contact.showLineButton"><span><strong>แสดงปุ่ม LINE</strong></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="contact.showFacebookButton"><span><strong>แสดงปุ่ม Facebook</strong></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="contact.showForm"><span><strong>แสดงแบบฟอร์ม</strong></span></label>
+              </div>
+              <div class="panel-heading subsection"><h2>ข้อความในแบบฟอร์ม</h2></div>
+              <div class="form-grid two-columns">
+                <label class="field">ชื่อช่องชื่อ<input type="text" data-path="contact.form.nameLabel"></label>
+                <label class="field">ตัวอย่างในช่องชื่อ<input type="text" data-path="contact.form.namePlaceholder"></label>
+                <label class="field">ชื่อช่องเบอร์โทร<input type="text" data-path="contact.form.phoneLabel"></label>
+                <label class="field">ตัวอย่างในช่องเบอร์โทร<input type="text" data-path="contact.form.phonePlaceholder"></label>
+                <label class="field">ชื่อช่องประเภทงาน<input type="text" data-path="contact.form.eventLabel"></label>
+                <label class="field">ข้อความเริ่มต้นประเภทงาน<input type="text" data-path="contact.form.eventPlaceholder"></label>
+                <label class="field">ชื่อช่องรายละเอียด<input type="text" data-path="contact.form.detailsLabel"></label>
+                <label class="field">ตัวอย่างในช่องรายละเอียด<input type="text" data-path="contact.form.detailsPlaceholder"></label>
+                <label class="field full-width">ข้อความปุ่มส่ง<input type="text" data-path="contact.form.submitButton"></label>
+              </div>
+              <div class="list-heading"><div><h3>ตัวเลือกประเภทงาน</h3><p>รายการที่ลูกค้าเลือกในแบบฟอร์ม</p></div><button type="button" class="secondary-button" data-add-list="contact.form.eventTypes">+ เพิ่มประเภทงาน</button></div>
+              <div id="event-type-fields" class="sortable-list"></div>
+            </div>
+
+            <div class="panel" data-panel-content="footer">
+              <div class="panel-heading"><h2>ท้ายเว็บไซต์และปุ่มลอย</h2><p>จัดการข้อความ โลโก้ ลิงก์หลังบ้าน และปุ่ม LINE ลอย</p></div>
+              <div class="form-grid two-columns">
+                <label class="field full-width">ข้อความลิขสิทธิ์<input type="text" data-path="footer.text"></label>
+                <label class="field">ข้อความติดต่อท้ายเว็บ<input type="text" data-path="footer.contactText"></label>
+                <label class="field">ข้อความลิงก์หลังบ้าน<input type="text" data-path="footer.adminLinkText"></label>
+                <label class="field">ข้อความปุ่ม LINE ลอย<input type="text" data-path="floating.label"></label>
+              </div>
+              <div class="toggle-grid subsection-grid">
+                <label class="toggle-card"><input type="checkbox" data-path="footer.showLogo"><span><strong>แสดงโลโก้ท้ายเว็บ</strong></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="footer.showContact"><span><strong>แสดงข้อมูลติดต่อ</strong></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="footer.showAdminLink"><span><strong>แสดงลิงก์จัดการเว็บไซต์</strong></span></label>
+                <label class="toggle-card"><input type="checkbox" data-path="floating.showLine"><span><strong>แสดงปุ่ม LINE ลอย</strong></span></label>
+              </div>
+              <div class="color-grid subsection-grid"><label class="field color-field">สีพื้นหลังท้ายเว็บ<span><input type="color" data-path="footer.backgroundColor"><input type="text" data-color-text="footer.backgroundColor"></span></label></div>
+            </div>
+
+            <div class="panel" data-panel-content="appearance">
+              <div class="panel-heading"><h2>สี ฟอนต์ และขนาด</h2><p>ปรับหน้าตาของเว็บไซต์ทั้งระบบจากจุดเดียว</p></div>
+              <div class="color-grid form-grid two-columns">
+                <label class="field color-field">สีหลัก<span><input type="color" data-path="design.primaryColor"><input type="text" data-color-text="design.primaryColor"></span></label>
+                <label class="field color-field">สีหลักแบบสว่าง<span><input type="color" data-path="design.primaryLight"><input type="text" data-color-text="design.primaryLight"></span></label>
+                <label class="field color-field">สีพื้นหลัง<span><input type="color" data-path="design.backgroundColor"><input type="text" data-color-text="design.backgroundColor"></span></label>
+                <label class="field color-field">สีการ์ด<span><input type="color" data-path="design.surfaceColor"><input type="text" data-color-text="design.surfaceColor"></span></label>
+                <label class="field color-field">สีตัวหนังสือ<span><input type="color" data-path="design.textColor"><input type="text" data-color-text="design.textColor"></span></label>
+                <label class="field color-field">สีข้อความรอง<span><input type="color" data-path="design.mutedColor"><input type="text" data-color-text="design.mutedColor"></span></label>
+              </div>
+              <div class="form-grid two-columns subsection-grid">
+                <label class="field">ฟอนต์<select data-path="design.fontFamily"><option value="Kanit">Kanit</option><option value="Prompt">Prompt</option><option value="Sarabun">Sarabun</option><option value="System">ฟอนต์เครื่อง</option></select></label>
+                <label class="field">ความกว้างเนื้อหา (px)<input type="number" min="880" max="1600" data-path="design.containerWidth"></label>
+                <label class="field">ความมนของการ์ด (px)<input type="number" min="0" max="50" data-path="design.borderRadius"></label>
+                <label class="field">ความมนของปุ่ม (px)<input type="number" min="0" max="50" data-path="design.buttonRadius"></label>
+                <label class="field">ระยะห่างแต่ละส่วน (px)<input type="number" min="40" max="180" data-path="design.sectionPadding"></label>
+              </div>
+              <div class="toggle-grid subsection-grid"><label class="toggle-card"><input type="checkbox" data-path="design.cardShadow"><span><strong>แสดงเงาการ์ด</strong><small>ปิดเพื่อให้หน้าเว็บดูเรียบขึ้น</small></span></label></div>
+            </div>
+
+            <div class="panel" data-panel-content="backup">
+              <div class="panel-heading"><h2>บันทึก สำรอง และเผยแพร่</h2><p>เก็บข้อมูลสำรอง หรือสร้างไฟล์สำหรับนำขึ้น Vercel</p></div>
+              <div class="backup-grid">
+                <article class="action-card"><div class="action-icon">✓</div><h3>บันทึกในเบราว์เซอร์</h3><p>การแก้ไขจะแสดงบนอุปกรณ์และเบราว์เซอร์นี้ทันที</p><button type="button" class="primary-button" id="save-copy-button">บันทึกตอนนี้</button></article>
+                <article class="action-card"><div class="action-icon">JS</div><h3>สร้างไฟล์เผยแพร่</h3><p>ดาวน์โหลด site-content.js แล้วนำไปแทนไฟล์เดิมบน Vercel</p><button type="button" class="secondary-button" id="publish-file-button">ดาวน์โหลด site-content.js</button></article>
+                <article class="action-card"><div class="action-icon">⇩</div><h3>สำรองข้อมูล JSON</h3><p>เก็บข้อมูลทั้งหมดไว้สำหรับกู้คืนในภายหลัง</p><button type="button" class="secondary-button" id="export-button">ดาวน์โหลดไฟล์สำรอง</button></article>
+                <article class="action-card"><div class="action-icon">⇧</div><h3>นำเข้าข้อมูล</h3><p>เลือกไฟล์ JSON ที่เคยสำรองไว้</p><label class="upload-button">เลือกไฟล์สำรอง<input type="file" id="import-input" accept="application/json" hidden></label></article>
+                <article class="action-card"><div class="action-icon">#</div><h3>เปลี่ยนรหัสเข้าใช้งาน</h3><p>ตั้งรหัสตัวเลข 4–12 หลักสำหรับอุปกรณ์นี้</p><div class="inline-action"><input id="new-pin" type="password" inputmode="numeric" placeholder="รหัสใหม่"><button type="button" class="secondary-button" id="change-pin-button">เปลี่ยนรหัส</button></div></article>
+                <article class="action-card warning-card"><div class="action-icon">↺</div><h3>คืนค่าเริ่มต้น</h3><p>ล้างการแก้ไขทั้งหมดและกลับเป็นเว็บต้นฉบับ</p><button type="button" class="danger-button" id="reset-button">คืนค่าทั้งหมด</button></article>
+              </div>
+              <div class="notice-card"><strong>หมายเหตุเรื่องการเผยแพร่</strong><p>เว็บนี้เป็นเว็บไซต์แบบ Static การกดบันทึกจะเก็บในเบราว์เซอร์ปัจจุบัน หากต้องการให้ทุกคนเห็นการเปลี่ยนแปลง ให้นำไฟล์ site-content.js ที่ดาวน์โหลดไปแทนไฟล์เดิมและอัปโหลดขึ้น Vercel อีกครั้ง</p></div>
+            </div>
+          </form>
+        </section>
+
+        <aside class="preview-area">
+          <div class="preview-toolbar">
+            <span><i class="live-dot"></i>ตัวอย่างสด — คลิกเพื่อเลือก • ลากเพื่อย้ายข้อความ</span>
+            <div class="device-buttons">
+              <button type="button" class="device-button is-active" data-device="desktop" title="คอมพิวเตอร์">▰</button>
+              <button type="button" class="device-button" data-device="tablet" title="แท็บเล็ต">▯</button>
+              <button type="button" class="device-button" data-device="mobile" title="มือถือ">▯</button>
+              <button type="button" class="device-button" id="refresh-preview" title="รีเฟรช">↻</button>
+            </div>
+          </div>
+          <div class="device-stage" data-device-stage="desktop"><div class="device-frame"><iframe id="preview-frame" src="index.html?editor=1" title="ตัวอย่างเว็บไซต์"></iframe></div></div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script src="site-content.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

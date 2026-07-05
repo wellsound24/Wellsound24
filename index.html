@@ -1,102 +1,127 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Wellsound</title>
-    <meta name="description" content="Wellsound hearing care website" />
-    <link rel="stylesheet" href="assets/site.css" />
-  </head>
-  <body>
-    <header class="topbar">
-      <a class="brand" href="#home" aria-label="Wellsound home">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span data-text="brand.name">Wellsound</span>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Wellsound24 ให้เช่าเครื่องเสียง เวที ไฟ และจอ LED พร้อมทีมงานมืออาชีพในกรุงเทพฯ">
+  <meta name="theme-color" content="#050505">
+  <title>Wellsound24 | เช่าเครื่องเสียง เวที ไฟ และจอ LED</title>
+  <link id="site-favicon" href="assets/favicon.png" rel="icon" type="image/png">
+  <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+  <header class="site-header" id="top" data-site-header>
+    <div class="container nav-wrap">
+      <a aria-label="Wellsound24 หน้าแรก" class="brand" href="#top">
+        <img alt="ช่องสำหรับใส่โลโก้" class="site-logo" src="assets/logo.png" data-edit-image="site.logo">
       </a>
-      <nav class="nav" aria-label="Main navigation">
-        <a href="#services">บริการ</a>
-        <a href="#packages">แพ็กเกจ</a>
-        <a href="#contact">ติดต่อ</a>
-        <a class="admin-link" href="admin/">Dashboard</a>
-      </nav>
-    </header>
+      <button aria-controls="main-nav" aria-expanded="false" class="menu-toggle" type="button">
+        <span></span><span></span><span></span><span class="sr-only">เปิดเมนู</span>
+      </button>
+      <nav aria-label="เมนูหลัก" class="main-nav" id="main-nav"></nav>
+      <a class="header-cta btn btn-primary" href="#contact" data-header-cta data-edit-path="header.ctaText">ขอใบเสนอราคา</a>
+    </div>
+  </header>
 
-    <main id="home">
-      <section class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow" data-text="brand.tagline">Hearing care made clear</p>
-          <h1 data-text="hero.headline">ดูแลการได้ยินให้ชีวิตกลับมาชัดเจน</h1>
-          <p class="lead" data-text="hero.subheadline"></p>
-          <div class="hero-actions">
-            <a class="button primary" href="#contact" data-text="hero.ctaText">นัดประเมินการได้ยิน</a>
-            <a class="button ghost" href="#services" data-text="hero.secondaryCtaText">ดูบริการ</a>
-          </div>
+  <main id="page-sections">
+    <section class="hero" id="hero" data-section-id="hero" data-edit-image="hero.image">
+      <div class="hero-overlay"></div>
+      <div aria-hidden="true" class="hero-lights"></div>
+      <div class="container hero-content">
+        <p class="eyebrow" data-edit-path="hero.eyebrow">EVENT PRODUCTION • BANGKOK</p>
+        <h1>
+          <span class="hero-title-main" data-edit-path="hero.titleLine1">ยกระดับทุกงาน</span><br>
+          <span class="hero-title-accent" data-edit-path="hero.titleLine2">ด้วยแสง สี เสียงมืออาชีพ</span>
+        </h1>
+        <p class="hero-copy" data-edit-path="hero.description">ให้เช่าเครื่องเสียง เวที ระบบไฟ และจอ LED สำหรับงานแต่ง งานบริษัท งานเลี้ยง มินิคอนเสิร์ต และอีเวนต์ทุกประเภท</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary hero-primary" href="#contact" data-edit-path="hero.primaryButton">ขอใบเสนอราคา</a>
+          <a class="btn btn-secondary hero-secondary" href="#services" data-edit-path="hero.secondaryButton">ดูบริการของเรา</a>
         </div>
-        <div class="sound-panel" aria-label="Wellsound sound clarity visual">
-          <div class="portrait-orbit">
-            <div class="ear-shape"></div>
-            <div class="wave wave-one"></div>
-            <div class="wave wave-two"></div>
-            <div class="wave wave-three"></div>
-          </div>
-          <div class="meter" aria-hidden="true">
-            <span style="--h: 42%"></span>
-            <span style="--h: 68%"></span>
-            <span style="--h: 88%"></span>
-            <span style="--h: 55%"></span>
-            <span style="--h: 74%"></span>
-            <span style="--h: 48%"></span>
-          </div>
-        </div>
-      </section>
+        <div aria-label="จุดเด่นของเรา" class="hero-stats" id="hero-stats"></div>
+      </div>
+    </section>
 
-      <section class="stats" data-list="stats"></section>
-
-      <section class="section" id="services">
+    <section class="section services" id="services" data-section-id="services">
+      <div class="container">
         <div class="section-heading">
-          <p class="eyebrow">Services</p>
-          <h2>บริการหลัก</h2>
+          <p class="eyebrow" data-edit-path="servicesSection.eyebrow">OUR SERVICES</p>
+          <h2 data-edit-path="servicesSection.title">บริการของ Wellsound24</h2>
+          <p data-edit-path="servicesSection.description">เลือกใช้บริการแยกส่วน หรือให้เราดูแลระบบภายในงานแบบครบวงจร</p>
         </div>
-        <div class="grid three" data-list="services"></div>
-      </section>
+        <div class="service-grid" id="service-grid"></div>
+      </div>
+    </section>
 
-      <section class="section tone" id="packages">
+    <section class="section why-us" id="why-us" data-section-id="why">
+      <div class="container split-layout">
+        <div class="why-copy-wrap">
+          <p class="eyebrow" data-edit-path="why.eyebrow">WHY WELLSOUND24</p>
+          <h2><span data-edit-path="why.titleLine1">ดูแลทุกขั้นตอน</span><br><span data-edit-path="why.titleLine2">ให้คุณจัดงานได้อย่างมั่นใจ</span></h2>
+          <p class="section-copy" data-edit-path="why.description">เราช่วยวางแผนอุปกรณ์ให้เหมาะกับพื้นที่ จำนวนแขก และรูปแบบงาน พร้อมติดตั้ง ทดสอบ และควบคุมระบบตลอดงาน</p>
+          <ul class="check-list" id="why-list"></ul>
+        </div>
+        <div class="why-visual-wrap" data-edit-image="why.image">
+          <div aria-label="ภาพจำลองเวทีคอนเสิร์ต" class="stage-visual" id="stage-visual">
+            <div class="beam beam-a"></div><div class="beam beam-b"></div><div class="beam beam-c"></div>
+            <div class="led-screen"><span class="screen-one" data-edit-path="why.screenLine1">WELL</span><br><span class="screen-two" data-edit-path="why.screenLine2">SOUND24</span></div>
+            <div class="stage"></div><div class="speaker speaker-left"></div><div class="speaker speaker-right"></div><div class="crowd"></div>
+          </div>
+          <div class="why-image" id="why-image"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section portfolio" id="portfolio" data-section-id="portfolio">
+      <div class="container">
         <div class="section-heading">
-          <p class="eyebrow">Plans</p>
-          <h2>แพ็กเกจดูแลการได้ยิน</h2>
+          <p class="eyebrow" data-edit-path="portfolioSection.eyebrow">EVENT TYPES</p>
+          <h2 data-edit-path="portfolioSection.title">รองรับงานหลากหลายรูปแบบ</h2>
+          <p data-edit-path="portfolioSection.description">ผลงานและรูปแบบงานที่เรารับดูแล</p>
         </div>
-        <div class="grid three" data-list="packages"></div>
-      </section>
+        <div class="portfolio-grid" id="portfolio-grid"></div>
+      </div>
+    </section>
 
-      <section class="section split">
+    <section class="section contact" id="contact" data-section-id="contact">
+      <div class="container contact-box">
         <div>
-          <p class="eyebrow">Trust</p>
-          <h2>เสียงจากผู้รับบริการ</h2>
+          <p class="eyebrow" data-edit-path="contact.eyebrow">CONTACT US</p>
+          <h2 data-edit-path="contact.title">กำลังวางแผนจัดงาน?</h2>
+          <p data-edit-path="contact.description">ส่งรายละเอียดวันจัดงาน สถานที่ จำนวนแขก และอุปกรณ์ที่ต้องการ เพื่อให้เราช่วยประเมินราคาได้รวดเร็วขึ้น</p>
+          <div class="contact-actions">
+            <a class="btn btn-primary contact-phone" data-edit-path="contact.phoneButton" href="tel:0932614296">โทรสอบถาม</a>
+            <a class="btn btn-line contact-line" data-edit-path="contact.lineButton" href="#" rel="noopener" target="_blank">คุยผ่าน LINE</a>
+            <a class="btn btn-facebook contact-facebook" data-edit-path="contact.facebookButton" href="#" rel="noopener" target="_blank">ติดต่อทาง Facebook</a>
+          </div>
+          <p class="contact-note" data-edit-path="contact.note">พร้อมให้คำปรึกษาและประเมินราคาตามรายละเอียดของงาน</p>
+          <div class="contact-details" id="contact-details"></div>
         </div>
-        <div class="testimonial-list" data-list="testimonials"></div>
-      </section>
+        <form class="quote-form" id="quote-form">
+          <label><span data-edit-path="contact.form.nameLabel">ชื่อผู้ติดต่อ</span><input name="name" required type="text"></label>
+          <label><span data-edit-path="contact.form.phoneLabel">เบอร์โทรศัพท์</span><input name="phone" required type="tel"></label>
+          <label><span data-edit-path="contact.form.eventLabel">ประเภทงาน</span><select name="eventType" id="event-type-select" required></select></label>
+          <label><span data-edit-path="contact.form.detailsLabel">รายละเอียดเพิ่มเติม</span><textarea name="details" rows="4"></textarea></label>
+          <button class="btn btn-primary btn-full" type="submit" data-edit-path="contact.form.submitButton">เตรียมข้อความส่ง LINE</button>
+          <p aria-live="polite" class="form-message" id="form-message"></p>
+        </form>
+      </div>
+    </section>
+  </main>
 
-      <section class="contact-band" id="contact">
-        <div>
-          <p class="eyebrow">Contact</p>
-          <h2>นัดหมายหรือสอบถามเพิ่มเติม</h2>
-          <p data-text="brand.description"></p>
-        </div>
-        <div class="contact-card">
-          <a data-contact="phone" href="tel:020000000">02-000-0000</a>
-          <a data-contact="line" href="#">@wellsound</a>
-          <a data-contact="email" href="mailto:hello@wellsound.example">hello@wellsound.example</a>
-          <p data-contact="address">กรุงเทพมหานคร ประเทศไทย</p>
-          <p data-contact="hours">เปิดทุกวัน 09:00-18:00</p>
-        </div>
-      </section>
-    </main>
+  <footer class="site-footer" data-site-footer>
+    <div class="container footer-wrap">
+      <img alt="ช่องสำหรับใส่โลโก้" class="site-logo footer-logo" src="assets/logo.png" data-edit-image="site.logo">
+      <div class="footer-copy">
+        <p>© <span id="current-year"></span> <span data-edit-path="footer.text">Wellsound24. All rights reserved.</span></p>
+        <a class="footer-contact contact-phone" href="tel:0932614296" data-edit-path="footer.contactText">โทร 093-261-4296</a>
+      </div>
+      <a class="admin-link" href="admin.html" data-edit-path="footer.adminLinkText">จัดการเว็บไซต์</a>
+    </div>
+  </footer>
 
-    <footer class="footer">
-      <span data-text="brand.name">Wellsound</span>
-      <span>Dashboard: <a href="admin/">แก้ไขเนื้อหาเว็บไซต์</a></span>
-    </footer>
-
-    <script src="assets/app.js"></script>
-  </body>
+  <a aria-label="ติดต่อผ่าน LINE" class="floating-line contact-line" href="#" rel="noopener" target="_blank" data-edit-path="floating.label">LINE</a>
+  <script src="site-content.js"></script>
+  <script src="script.js"></script>
+</body>
 </html>
