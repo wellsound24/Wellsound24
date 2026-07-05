@@ -56,6 +56,7 @@
           <button class="icon-text-button" type="button" id="redo-button" title="ทำซ้ำ">↷ <span>ทำซ้ำ</span></button>
           <a class="ghost-button link-button" href="index.html" target="_blank" rel="noopener">เปิดหน้าเว็บ</a>
           <button class="primary-button" type="button" id="save-button">บันทึกการแก้ไข</button>
+          <button class="secondary-button" type="button" id="publish-github-top-button">บันทึกขึ้นเว็บจริง</button>
         </div>
       </header>
       <div class="status-bar" id="status-bar" role="status">พร้อมแก้ไข</div>
@@ -317,13 +318,25 @@
               <div class="panel-heading"><h2>บันทึก สำรอง และเผยแพร่</h2><p>เก็บข้อมูลสำรอง หรือสร้างไฟล์สำหรับนำขึ้น Vercel</p></div>
               <div class="backup-grid">
                 <article class="action-card"><div class="action-icon">✓</div><h3>บันทึกในเบราว์เซอร์</h3><p>การแก้ไขจะแสดงบนอุปกรณ์และเบราว์เซอร์นี้ทันที</p><button type="button" class="primary-button" id="save-copy-button">บันทึกตอนนี้</button></article>
+                <article class="action-card"><div class="action-icon">GH</div><h3>บันทึกขึ้นเว็บไซต์จริง</h3><p>อัปเดตไฟล์ site-content.js ใน GitHub เพื่อให้ Vercel deploy และให้ทุกคนเห็นข้อมูลใหม่</p><button type="button" class="primary-button" id="publish-github-button">บันทึกขึ้น GitHub</button></article>
                 <article class="action-card"><div class="action-icon">JS</div><h3>สร้างไฟล์เผยแพร่</h3><p>ดาวน์โหลด site-content.js แล้วนำไปแทนไฟล์เดิมบน Vercel</p><button type="button" class="secondary-button" id="publish-file-button">ดาวน์โหลด site-content.js</button></article>
                 <article class="action-card"><div class="action-icon">⇩</div><h3>สำรองข้อมูล JSON</h3><p>เก็บข้อมูลทั้งหมดไว้สำหรับกู้คืนในภายหลัง</p><button type="button" class="secondary-button" id="export-button">ดาวน์โหลดไฟล์สำรอง</button></article>
                 <article class="action-card"><div class="action-icon">⇧</div><h3>นำเข้าข้อมูล</h3><p>เลือกไฟล์ JSON ที่เคยสำรองไว้</p><label class="upload-button">เลือกไฟล์สำรอง<input type="file" id="import-input" accept="application/json" hidden></label></article>
                 <article class="action-card"><div class="action-icon">#</div><h3>เปลี่ยนรหัสเข้าใช้งาน</h3><p>ตั้งรหัสตัวเลข 4–12 หลักสำหรับอุปกรณ์นี้</p><div class="inline-action"><input id="new-pin" type="password" inputmode="numeric" placeholder="รหัสใหม่"><button type="button" class="secondary-button" id="change-pin-button">เปลี่ยนรหัส</button></div></article>
                 <article class="action-card warning-card"><div class="action-icon">↺</div><h3>คืนค่าเริ่มต้น</h3><p>ล้างการแก้ไขทั้งหมดและกลับเป็นเว็บต้นฉบับ</p><button type="button" class="danger-button" id="reset-button">คืนค่าทั้งหมด</button></article>
               </div>
-              <div class="notice-card"><strong>หมายเหตุเรื่องการเผยแพร่</strong><p>เว็บนี้เป็นเว็บไซต์แบบ Static การกดบันทึกจะเก็บในเบราว์เซอร์ปัจจุบัน หากต้องการให้ทุกคนเห็นการเปลี่ยนแปลง ให้นำไฟล์ site-content.js ที่ดาวน์โหลดไปแทนไฟล์เดิมและอัปโหลดขึ้น Vercel อีกครั้ง</p></div>
+              <div class="notice-card">
+                <strong>ตั้งค่าการบันทึกขึ้น GitHub</strong>
+                <p>ใช้ Fine-grained GitHub token ที่มีสิทธิ์ Contents: Read and write เฉพาะ repo wellsound24/Wellsound24 ข้อมูล token จะเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น</p>
+                <div class="form-grid two-columns subsection-grid">
+                  <label class="field">GitHub owner<input type="text" id="github-owner" value="wellsound24"></label>
+                  <label class="field">Repository<input type="text" id="github-repo" value="Wellsound24"></label>
+                  <label class="field">Branch<input type="text" id="github-branch" value="main"></label>
+                  <label class="field">ไฟล์ที่จะอัปเดต<input type="text" id="github-path" value="site-content.js"></label>
+                  <label class="field full-width">GitHub token<input type="password" id="github-token" placeholder="github_pat_..."></label>
+                </div>
+              </div>
+              <div class="notice-card"><strong>หมายเหตุเรื่องการเผยแพร่</strong><p>ปุ่ม “บันทึกการแก้ไข” จะเก็บในเบราว์เซอร์ปัจจุบันเท่านั้น ถ้าต้องการให้หน้าเว็บจริงเปลี่ยน ให้กด “บันทึกขึ้นเว็บไซต์จริง” เพื่ออัปเดต GitHub และให้ Vercel deploy ใหม่</p></div>
             </div>
           </form>
         </section>
