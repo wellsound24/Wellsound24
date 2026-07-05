@@ -318,15 +318,15 @@
               <div class="panel-heading"><h2>บันทึก สำรอง และเผยแพร่</h2><p>เก็บข้อมูลสำรอง หรือสร้างไฟล์สำหรับนำขึ้น Vercel</p></div>
               <div class="backup-grid">
                 <article class="action-card"><div class="action-icon">✓</div><h3>บันทึกในเบราว์เซอร์</h3><p>การแก้ไขจะแสดงบนอุปกรณ์และเบราว์เซอร์นี้ทันที</p><button type="button" class="primary-button" id="save-copy-button">บันทึกตอนนี้</button></article>
-                <article class="action-card"><div class="action-icon">LIVE</div><h3>บันทึกขึ้นเว็บไซต์จริง</h3><p>ส่งข้อมูลไปหลังบ้านของ Vercel เพื่ออัปเดต site-content.js ใน GitHub แล้วให้ Vercel deploy ใหม่</p><button type="button" class="primary-button" id="publish-github-button">บันทึกขึ้นเว็บจริง</button></article>
+                <article class="action-card"><div class="action-icon">LIVE</div><h3>บันทึกขึ้นเว็บไซต์จริง</h3><p>ส่งข้อมูลไปหลังบ้านของ Vercel เพื่อเก็บเป็นข้อมูลเว็บจริงโดยไม่ต้องใช้ GitHub token ใน Dashboard</p><button type="button" class="primary-button" id="publish-github-button">บันทึกขึ้นเว็บจริง</button></article>
                 <article class="action-card"><div class="action-icon">JS</div><h3>สร้างไฟล์เผยแพร่</h3><p>ดาวน์โหลด site-content.js แล้วนำไปแทนไฟล์เดิมบน Vercel</p><button type="button" class="secondary-button" id="publish-file-button">ดาวน์โหลด site-content.js</button></article>
                 <article class="action-card"><div class="action-icon">⇩</div><h3>สำรองข้อมูล JSON</h3><p>เก็บข้อมูลทั้งหมดไว้สำหรับกู้คืนในภายหลัง</p><button type="button" class="secondary-button" id="export-button">ดาวน์โหลดไฟล์สำรอง</button></article>
                 <article class="action-card"><div class="action-icon">⇧</div><h3>นำเข้าข้อมูล</h3><p>เลือกไฟล์ JSON ที่เคยสำรองไว้</p><label class="upload-button">เลือกไฟล์สำรอง<input type="file" id="import-input" accept="application/json" hidden></label></article>
                 <article class="action-card"><div class="action-icon">#</div><h3>เปลี่ยนรหัสเข้าใช้งาน</h3><p>ตั้งรหัสตัวเลข 4–12 หลักสำหรับอุปกรณ์นี้</p><div class="inline-action"><input id="new-pin" type="password" inputmode="numeric" placeholder="รหัสใหม่"><button type="button" class="secondary-button" id="change-pin-button">เปลี่ยนรหัส</button></div></article>
                 <article class="action-card warning-card"><div class="action-icon">↺</div><h3>คืนค่าเริ่มต้น</h3><p>ล้างการแก้ไขทั้งหมดและกลับเป็นเว็บต้นฉบับ</p><button type="button" class="danger-button" id="reset-button">คืนค่าทั้งหมด</button></article>
               </div>
-              <div class="notice-card"><strong>ระบบบันทึกขึ้นเว็บจริง</strong><p>Dashboard จะไม่ขอ GitHub token ในหน้าเว็บ ระบบจะเรียก API หลังบ้าน `/api/publish` แทน และใช้สิทธิ์ที่ตั้งไว้ใน Vercel Environment Variables</p></div>
-              <div class="notice-card"><strong>หมายเหตุเรื่องการเผยแพร่</strong><p>ปุ่ม “บันทึกการแก้ไข” จะเก็บในเบราว์เซอร์ปัจจุบันเท่านั้น ถ้าต้องการให้หน้าเว็บจริงเปลี่ยน ให้กด “บันทึกขึ้นเว็บไซต์จริง” เพื่ออัปเดต GitHub และให้ Vercel deploy ใหม่</p></div>
+              <div class="notice-card"><strong>ระบบบันทึกขึ้นเว็บจริง</strong><p>Dashboard จะไม่ขอ GitHub token ในหน้าเว็บ ระบบจะเรียก API หลังบ้าน `/api/content` และเก็บข้อมูลไว้ที่ Google Apps Script ที่ตั้งค่าใน Vercel</p></div>
+              <div class="notice-card"><strong>หมายเหตุเรื่องการเผยแพร่</strong><p>ปุ่ม “บันทึกการแก้ไข” จะเก็บในเบราว์เซอร์ปัจจุบันเท่านั้น ถ้าต้องการให้หน้าเว็บจริงเปลี่ยน ให้กด “บันทึกขึ้นเว็บไซต์จริง” แล้วเปิดหน้าเว็บใหม่เพื่อดึงข้อมูลล่าสุด</p></div>
             </div>
           </form>
         </section>

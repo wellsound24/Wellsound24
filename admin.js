@@ -150,6 +150,7 @@
     dashboard.classList.remove("is-hidden");
     renderForm();
     setTimeout(sendPreview, 250);
+    loadPublishedContent();
   }
 
   loginForm.addEventListener("submit", (event) => {
@@ -743,6 +744,23 @@
     ].join("\n");
   }
 
+  async function loadPublishedContent() {
+    try {
+      const response = await fetch("/api/content", { cache: "no-store" });
+      if (!response.ok) return;
+      const result = await response.json();
+      if (!result?.content?.site) return;
+      draft = deepMerge(DEFAULTS, result.content);
+      history = [clone(draft)];
+      historyIndex = 0;
+      renderForm();
+      sendPreview();
+      setStatus("โหลดข้อมูลล่าสุดจากเว็บไซต์จริงแล้ว", "success");
+    } catch (error) {
+      console.warn("โหลดข้อมูลจริงไม่สำเร็จ", error);
+    }
+  }
+
   async function publishToGithub() {
     saveChanges();
     const publishButtons = [publishGithubTopButton, publishGithubButton].filter(Boolean);
@@ -750,7 +768,7 @@
     setStatus("กำลังบันทึกขึ้นเว็บไซต์จริง...");
 
     try {
-      const response = await fetch("/api/publish", {
+      const response = await fetch("/api/content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -763,7 +781,7 @@
         throw new Error(result.error || `บันทึกไม่สำเร็จ (${response.status})`);
       }
 
-      setStatus("บันทึกขึ้นเว็บไซต์จริงแล้ว รอ Vercel deploy ประมาณ 1-2 นาที", "success");
+      setStatus("บันทึกขึ้นเว็บไซต์จริงแล้ว เปิดหน้าเว็บใหม่จะเห็นข้อมูลล่าสุด", "success");
     } catch (error) {
       console.error(error);
       setStatus(`บันทึกขึ้นเว็บไซต์จริงไม่สำเร็จ: ${error.message}`, "error");

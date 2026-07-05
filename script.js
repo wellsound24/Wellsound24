@@ -29,6 +29,18 @@
     }
   }
 
+  async function loadRemoteContent() {
+    try {
+      const response = await fetch("/api/content", { cache: "no-store" });
+      if (!response.ok) return null;
+      const result = await response.json();
+      return result?.content?.site ? deepMerge(DEFAULTS, result.content) : null;
+    } catch (error) {
+      console.warn("โหลดข้อมูลออนไลน์ไม่สำเร็จ ใช้ข้อมูลในไฟล์แทน", error);
+      return null;
+    }
+  }
+
   function getByPath(object, path) {
     return String(path).split(".").reduce((value, key) => value?.[key], object);
   }
@@ -443,6 +455,11 @@
 
   let currentContent = loadContent();
   applyContent(currentContent);
+  loadRemoteContent().then((remoteContent) => {
+    if (!remoteContent) return;
+    currentContent = remoteContent;
+    applyContent(currentContent);
+  });
   let textResizeTimer;
   window.addEventListener("resize", () => {
     clearTimeout(textResizeTimer);
