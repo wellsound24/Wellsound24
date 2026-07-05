@@ -133,6 +133,47 @@
   let historyTimer;
   let history = [clone(draft)];
   let historyIndex = 0;
+  let googleConfigPromise;
+  let googleTokenClient;
+  let googleAccessToken = "";
+
+  async function loadGoogleConfig() {
+    if (!googleConfigPromise) {
+      googleConfigPromise = fetch("/api/google-config", { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : {})
+        .catch(() => ({}));
+    }
+    return googleConfigPromise;
+  }
+
+  async function requestGoogleAccessToken() {
+    const config = await loadGoogleConfig();
+    if (!config.clientId) {
+      throw new Error("ยังไม่ได้ตั้งค่า GOOGLE_OAUTH_CLIENT_ID ใน Vercel");
+    }
+    if (!config.driveFileReady) {
+      throw new Error("ยังไม่ได้ตั้งค่า GOOGLE_DRIVE_FILE_ID ใน Vercel");
+    }
+    if (!window.google?.accounts?.oauth2) {
+      throw new Error("Google OAuth ยังโหลดไม่เสร็จ กรุณาลองกดบันทึกอีกครั้ง");
+    }
+
+    return new Promise((resolve, reject) => {
+      googleTokenClient = googleTokenClient || window.google.accounts.oauth2.initTokenClient({
+        client_id: config.clientId,
+        scope: "https://www.googleapis.com/auth/drive",
+        callback: (tokenResponse) => {
+          if (tokenResponse.error) {
+            reject(new Error(tokenResponse.error_description || tokenResponse.error));
+            return;
+          }
+          googleAccessToken = tokenResponse.access_token;
+          resolve(googleAccessToken);
+        }
+      });
+      googleTokenClient.requestAccessToken({ prompt: googleAccessToken ? "" : "consent" });
+    });
+  }
 
   function currentPin() {
     return localStorage.getItem(PIN_KEY) || DEFAULT_PIN;
@@ -150,6 +191,7 @@
     dashboard.classList.remove("is-hidden");
     renderForm();
     setTimeout(sendPreview, 250);
+    loadGoogleConfig();
     loadPublishedContent();
   }
 
@@ -765,12 +807,16 @@
     saveChanges();
     const publishButtons = [publishGithubTopButton, publishGithubButton].filter(Boolean);
     publishButtons.forEach((button) => { button.disabled = true; });
-    setStatus("กำลังบันทึกขึ้นเว็บไซต์จริง...");
+    setStatus("กำลังขอสิทธิ์ Google และบันทึกขึ้นเว็บไซต์จริง...");
 
     try {
+      const accessToken = await requestGoogleAccessToken();
       const response = await fetch("/api/content", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`
+        },
         body: JSON.stringify({
           pin: currentPin(),
           content: draft

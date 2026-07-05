@@ -1,4 +1,5 @@
-const GOOGLE_SCRIPT_URL = process.env.GOOGLE_SCRIPT_URL || "";
+const GOOGLE_DRIVE_FILE_ID = process.env.GOOGLE_DRIVE_FILE_ID || "";
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || "";
 const PUBLISH_PIN = process.env.PUBLISH_PIN || process.env.ADMIN_PIN || "2468";
 
 function send(res, status, payload) {
@@ -14,7 +15,7 @@ function readBody(req) {
     req.on("data", (chunk) => {
       body += chunk;
       if (body.length > 12 * 1024 * 1024) {
-        reject(new Error("ข้อมูลใหญ่เกินไป"));
+        reject(new Error("Payload is too large"));
         req.destroy();
       }
     });
@@ -23,54 +24,97 @@ function readBody(req) {
   });
 }
 
-async function callGoogle(payload) {
-  if (!GOOGLE_SCRIPT_URL) {
-    throw new Error("ยังไม่ได้ตั้งค่า GOOGLE_SCRIPT_URL ใน Vercel Environment Variables");
+function requireDriveFileId() {
+  if (!GOOGLE_DRIVE_FILE_ID) {
+    throw new Error("Missing GOOGLE_DRIVE_FILE_ID in Vercel Environment Variables");
+  }
+}
+
+async function readDriveContent() {
+  requireDriveFileId();
+  const url = new URL(`https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}`);
+  url.searchParams.set("alt", "media");
+  if (GOOGLE_API_KEY) url.searchParams.set("key", GOOGLE_API_KEY);
+
+  const response = await fetch(url);
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(text || `Google Drive read failed (${response.status})`);
+  }
+  return text ? JSON.parse(text) : null;
+}
+
+async function writeDriveContent(accessToken, content) {
+  requireDriveFileId();
+  if (!accessToken) {
+    throw new Error("Missing Google OAuth access token");
   }
 
-  const response = await fetch(GOOGLE_SCRIPT_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(payload)
-  });
+  const response = await fetch(
+    `https://www.googleapis.com/upload/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}?uploadType=media`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json; charset=utf-8"
+      },
+      body: JSON.stringify(content)
+    }
+  );
   const text = await response.text();
-  let data;
-  try {
-    data = JSON.parse(text);
-  } catch (error) {
-    throw new Error("Google Apps Script ตอบกลับไม่ใช่ JSON");
+  if (!response.ok) {
+    throw new Error(text || `Google Drive save failed (${response.status})`);
   }
-  if (!response.ok || data.ok === false) {
-    throw new Error(data.error || `Google Apps Script error ${response.status}`);
+  return text ? JSON.parse(text) : {};
+}
+
+async function makeDriveFileReadable(accessToken) {
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${GOOGLE_DRIVE_FILE_ID}/permissions`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json; charset=utf-8"
+      },
+      body: JSON.stringify({ role: "reader", type: "anyone" })
+    }
+  );
+  if (!response.ok && response.status !== 400 && response.status !== 409) {
+    const text = await response.text();
+    throw new Error(text || `Google Drive permission update failed (${response.status})`);
   }
-  return data;
 }
 
 module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
-      const data = await callGoogle({ action: "get" });
-      send(res, 200, { ok: true, content: data.content || null, updatedAt: data.updatedAt || null });
+      const content = await readDriveContent();
+      send(res, 200, { ok: true, content, updatedAt: null });
       return;
     }
 
     if (req.method === "POST") {
       const payload = JSON.parse(await readBody(req));
       if (String(payload.pin || "") !== String(PUBLISH_PIN)) {
-        send(res, 401, { ok: false, error: "รหัสเผยแพร่ไม่ถูกต้อง" });
+        send(res, 401, { ok: false, error: "Publish PIN is incorrect" });
         return;
       }
       if (!payload.content || typeof payload.content !== "object") {
-        send(res, 400, { ok: false, error: "ข้อมูลเว็บไซต์ไม่ถูกต้อง" });
+        send(res, 400, { ok: false, error: "Website content is invalid" });
         return;
       }
-      const data = await callGoogle({ action: "save", pin: PUBLISH_PIN, content: payload.content });
-      send(res, 200, { ok: true, updatedAt: data.updatedAt || null });
+
+      const authorization = String(req.headers.authorization || "");
+      const accessToken = authorization.replace(/^Bearer\s+/i, "").trim();
+      const data = await writeDriveContent(accessToken, payload.content);
+      await makeDriveFileReadable(accessToken);
+      send(res, 200, { ok: true, updatedAt: data.modifiedTime || null });
       return;
     }
 
     send(res, 405, { ok: false, error: "Method not allowed" });
   } catch (error) {
-    send(res, 500, { ok: false, error: error.message || "บันทึกไม่สำเร็จ" });
+    send(res, 500, { ok: false, error: error.message || "Save failed" });
   }
 };
