@@ -5,7 +5,6 @@
   const STORAGE_KEY = window.WELLSOUND_STORAGE_KEY || "wellsound24_site_content_v2";
   const OLD_STORAGE_KEY = "wellsound24_site_content_v1";
   const PIN_KEY = window.WELLSOUND_PIN_KEY || "wellsound24_admin_pin";
-  const GITHUB_SETTINGS_KEY = "wellsound24_github_publish_settings";
   const DEFAULT_PIN = "2468";
 
   const clone = (value) => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -744,94 +743,30 @@
     ].join("\n");
   }
 
-  function encodeBase64Utf8(text) {
-    const bytes = new TextEncoder().encode(text);
-    let binary = "";
-    const chunkSize = 0x8000;
-    for (let index = 0; index < bytes.length; index += chunkSize) {
-      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
-    }
-    return btoa(binary);
-  }
-
-  function githubSettings() {
-    const settings = {
-      owner: document.querySelector("#github-owner")?.value.trim() || "wellsound24",
-      repo: document.querySelector("#github-repo")?.value.trim() || "Wellsound24",
-      branch: document.querySelector("#github-branch")?.value.trim() || "main",
-      path: document.querySelector("#github-path")?.value.trim() || "site-content.js",
-      token: document.querySelector("#github-token")?.value.trim() || ""
-    };
-    localStorage.setItem(GITHUB_SETTINGS_KEY, JSON.stringify(settings));
-    return settings;
-  }
-
-  function restoreGithubSettings() {
-    try {
-      const settings = JSON.parse(localStorage.getItem(GITHUB_SETTINGS_KEY) || "{}");
-      const values = {
-        "#github-owner": settings.owner || "wellsound24",
-        "#github-repo": settings.repo || "Wellsound24",
-        "#github-branch": settings.branch || "main",
-        "#github-path": settings.path || "site-content.js",
-        "#github-token": settings.token || ""
-      };
-      Object.entries(values).forEach(([selector, value]) => {
-        const field = document.querySelector(selector);
-        if (field) field.value = value;
-      });
-    } catch (error) {
-      console.warn("โหลดค่า GitHub publish ไม่สำเร็จ", error);
-    }
-  }
-
   async function publishToGithub() {
     saveChanges();
-    const settings = githubSettings();
-    if (!settings.token) {
-      activatePanel("backup");
-      document.querySelector("#github-token")?.focus();
-      setStatus("กรุณาใส่ GitHub token ก่อนบันทึกขึ้นเว็บไซต์จริง", "error");
-      return;
-    }
-
     const publishButtons = [publishGithubTopButton, publishGithubButton].filter(Boolean);
     publishButtons.forEach((button) => { button.disabled = true; });
-    setStatus("กำลังบันทึกขึ้น GitHub...");
+    setStatus("กำลังบันทึกขึ้นเว็บไซต์จริง...");
 
     try {
-      const apiUrl = `https://api.github.com/repos/${settings.owner}/${settings.repo}/contents/${settings.path}`;
-      const headers = {
-        Authorization: `Bearer ${settings.token}`,
-        Accept: "application/vnd.github+json",
-        "Content-Type": "application/json"
-      };
-      const current = await fetch(`${apiUrl}?ref=${encodeURIComponent(settings.branch)}`, { headers });
-      const currentJson = current.ok ? await current.json() : {};
-      if (!current.ok && current.status !== 404) {
-        throw new Error(currentJson.message || `GitHub อ่านไฟล์ไม่สำเร็จ (${current.status})`);
-      }
-
-      const source = siteContentSource(draft);
-      const response = await fetch(apiUrl, {
-        method: "PUT",
-        headers,
+      const response = await fetch("/api/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `Update Wellsound24 content ${new Date().toLocaleString("th-TH")}`,
-          branch: settings.branch,
-          content: encodeBase64Utf8(source),
-          sha: currentJson.sha
+          pin: currentPin(),
+          content: draft
         })
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(result.message || `GitHub บันทึกไม่สำเร็จ (${response.status})`);
+        throw new Error(result.error || `บันทึกไม่สำเร็จ (${response.status})`);
       }
 
-      setStatus("บันทึกขึ้น GitHub แล้ว รอ Vercel deploy ประมาณ 1-2 นาที", "success");
+      setStatus("บันทึกขึ้นเว็บไซต์จริงแล้ว รอ Vercel deploy ประมาณ 1-2 นาที", "success");
     } catch (error) {
       console.error(error);
-      setStatus(`บันทึกขึ้น GitHub ไม่สำเร็จ: ${error.message}`, "error");
+      setStatus(`บันทึกขึ้นเว็บไซต์จริงไม่สำเร็จ: ${error.message}`, "error");
     } finally {
       publishButtons.forEach((button) => { button.disabled = false; });
     }
@@ -942,6 +877,4 @@
       redoButton.click();
     }
   });
-
-  restoreGithubSettings();
 })();
