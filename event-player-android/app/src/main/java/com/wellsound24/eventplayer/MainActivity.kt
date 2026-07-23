@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (savedInstanceState == null) {
-            webView.loadUrl("file:///android_asset/index.html")
+            webView.loadUrl("file:///android_asset/index_v3.html")
         } else {
             webView.restoreState(savedInstanceState)
         }
