@@ -1,0 +1,48 @@
+name: Build Wellsound24 Event Player APK
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'event-player-android/**'
+      - '.github/workflows/build-event-player-apk.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'event-player-android/**'
+      - '.github/workflows/build-event-player-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build debug APK
+        run: gradle -p event-player-android assembleDebug --stacktrace
+
+      - name: Rename APK
+        run: cp event-player-android/app/build/outputs/apk/debug/app-debug.apk Wellsound24-Event-Player-v1.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Wellsound24-Event-Player-APK
+          path: Wellsound24-Event-Player-v1.apk
+          if-no-files-found: error
+          retention-days: 30
