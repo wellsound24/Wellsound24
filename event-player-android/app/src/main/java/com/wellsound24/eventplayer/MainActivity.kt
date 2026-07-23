@@ -17,6 +17,25 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
+    private val supportedAudioMimeTypes = arrayOf(
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/mp4",
+        "audio/x-m4a",
+        "audio/aac",
+        "audio/wav",
+        "audio/x-wav",
+        "audio/flac",
+        "audio/x-flac",
+        "audio/ogg",
+        "audio/opus",
+        "audio/webm",
+        "audio/amr",
+        "audio/3gpp",
+        "audio/aiff",
+        "audio/x-aiff"
+    )
+
     private val filePicker = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -45,18 +64,13 @@ class MainActivity : AppCompatActivity() {
                 fileCallback?.onReceiveValue(null)
                 fileCallback = filePathCallback
 
-                val intent = try {
-                    fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = "audio/*"
-                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                    }
-                } catch (_: Exception) {
-                    Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                        addCategory(Intent.CATEGORY_OPENABLE)
-                        type = "audio/*"
-                        putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
-                    }
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                    putExtra(Intent.EXTRA_MIME_TYPES, supportedAudioMimeTypes)
+                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
                 }
 
                 filePicker.launch(intent)
