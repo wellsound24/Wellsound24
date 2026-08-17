@@ -18,24 +18,26 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
+import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MainActivity extends Activity {
     private static final String PREFS = "well_honda_obd";
     private static final String KEY_URL = "server_url";
     private static final int PORT = 8765;
+    private static final int DISCOVERY_PORT = 8766;
+    private static final String DISCOVERY_REQUEST = "WELLHONDA_DISCOVER_V1";
+    private static final String DISCOVERY_REPLY = "WELLHONDA_OBD|";
 
     private WebView webView;
     private EditText urlBox;
@@ -64,7 +66,7 @@ public class MainActivity extends Activity {
         top.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("Forza 350 • Android Live Dashboard v1.1 (Read-only)");
+        subtitle.setText("Forza 350 • Android v1.2 Auto Connect (Read-only)");
         subtitle.setTextColor(Color.rgb(154,166,178));
         subtitle.setTextSize(12);
         top.addView(subtitle);
@@ -94,13 +96,13 @@ public class MainActivity extends Activity {
         row.addView(connect, bp);
 
         findButton = new Button(this);
-        findButton.setText("ค้นหาคอมอัตโนมัติ");
-        LinearLayout.LayoutParams fp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46));
+        findButton.setText("AUTO CONNECT");
+        LinearLayout.LayoutParams fp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48));
         fp.topMargin = dp(6);
         top.addView(findButton, fp);
 
         stateText = new TextView(this);
-        stateText.setText("กด “ค้นหาคอมอัตโนมัติ” โดยให้มือถือและคอมอยู่ Wi‑Fi วงเดียวกัน");
+        stateText.setText("ให้มือถือและคอมอยู่ Wi-Fi วงเดียวกัน แล้วกด AUTO CONNECT");
         stateText.setTextColor(Color.rgb(154,166,178));
         stateText.setTextSize(11);
         top.addView(stateText);
@@ -115,7 +117,7 @@ public class MainActivity extends Activity {
         connect.setOnClickListener(v -> connectToServer());
         findButton.setOnClickListener(v -> autoFindServer());
 
-        if (urlBox.getText().toString().trim().isEmpty()) autoFindServer();
+        autoFindServer();
     }
 
     private void configureWebView() {
@@ -142,60 +144,65 @@ public class MainActivity extends Activity {
         if (scanning) return;
         scanning = true;
         findButton.setEnabled(false);
-        stateText.setText("กำลังค้นหา Well Honda OBD บน Wi‑Fi...");
+        stateText.setText("กำลังส่งสัญญาณหา Well Honda OBD...");
 
         new Thread(() -> {
-            String localIp = getLocalPrivateIpv4();
-            if (localIp == null || localIp.lastIndexOf('.') < 0) {
-                runOnUiThread(() -> finishScan(null, "ไม่พบ IP Wi‑Fi ของมือถือ"));
-                return;
-            }
+            DatagramSocket socket = null;
+            try {
+                socket = new DatagramSocket();
+                socket.setBroadcast(true);
+                socket.setSoTimeout(2300);
+                byte[] request = DISCOVERY_REQUEST.getBytes(StandardCharsets.US_ASCII);
 
-            String prefix = localIp.substring(0, localIp.lastIndexOf('.') + 1);
-            ExecutorService pool = Executors.newFixedThreadPool(32);
-            AtomicBoolean found = new AtomicBoolean(false);
-            AtomicInteger done = new AtomicInteger(0);
+                Set<String> sent = new HashSet<>();
+                sendDiscovery(socket, request, InetAddress.getByName("255.255.255.255"), sent);
 
-            for (int i = 1; i <= 254; i++) {
-                final String host = prefix + i;
-                pool.submit(() -> {
+                for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                    if (!ni.isUp() || ni.isLoopback()) continue;
+                    for (InterfaceAddress ia : ni.getInterfaceAddresses()) {
+                        InetAddress addr = ia.getAddress();
+                        InetAddress broadcast = ia.getBroadcast();
+                        if (addr instanceof Inet4Address && broadcast != null)
+                            sendDiscovery(socket, request, broadcast, sent);
+                    }
+                }
+
+                long deadline = System.currentTimeMillis() + 2400;
+                while (System.currentTimeMillis() < deadline) {
+                    byte[] buf = new byte[512];
+                    DatagramPacket packet = new DatagramPacket(buf, buf.length);
                     try {
-                        if (!found.get() && probe(host)) {
-                            if (found.compareAndSet(false, true)) {
-                                runOnUiThread(() -> finishScan("http://" + host + ":" + PORT + "/", null));
-                                pool.shutdownNow();
-                                return;
-                            }
-                        }
-                    } finally {
-                        if (done.incrementAndGet() >= 254 && !found.get()) {
-                            runOnUiThread(() -> finishScan(null, "ไม่พบคอมที่เปิด Well Honda OBD v1.2.1 ใน Wi‑Fi นี้"));
-                            pool.shutdown();
+                        socket.receive(packet);
+                    } catch (SocketTimeoutException timeout) {
+                        break;
+                    }
+                    String reply = new String(packet.getData(), packet.getOffset(), packet.getLength(), StandardCharsets.US_ASCII).trim();
+                    if (reply.startsWith(DISCOVERY_REPLY)) {
+                        String url = reply.substring(DISCOVERY_REPLY.length()).trim();
+                        if (isAllowedLocalUrl(url)) {
+                            final String foundUrl = url;
+                            runOnUiThread(() -> finishScan(foundUrl, null));
+                            return;
                         }
                     }
-                });
+                }
+                runOnUiThread(() -> finishScan(null, "ไม่พบ Windows v1.3.2 — ตรวจว่าเปิดโปรแกรมและอยู่ Wi-Fi เดียวกัน"));
+            } catch (Exception e) {
+                final String msg = e.getClass().getSimpleName();
+                runOnUiThread(() -> finishScan(null, "AUTO CONNECT ไม่สำเร็จ: " + msg));
+            } finally {
+                if (socket != null) socket.close();
             }
         }).start();
     }
 
-    private boolean probe(String host) {
-        HttpURLConnection c = null;
+    private void sendDiscovery(DatagramSocket socket, byte[] request, InetAddress target, Set<String> sent) {
         try {
-            URL u = new URL("http://" + host + ":" + PORT + "/api/live");
-            c = (HttpURLConnection)u.openConnection();
-            c.setConnectTimeout(280);
-            c.setReadTimeout(400);
-            c.setRequestMethod("GET");
-            int code = c.getResponseCode();
-            if (code != 200) return false;
-            BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream()));
-            String line = r.readLine();
-            return line != null && line.contains("\"status\"");
-        } catch (Exception e) {
-            return false;
-        } finally {
-            if (c != null) c.disconnect();
-        }
+            String key = target.getHostAddress();
+            if (!sent.add(key)) return;
+            DatagramPacket packet = new DatagramPacket(request, request.length, target, DISCOVERY_PORT);
+            socket.send(packet);
+        } catch (Exception ignored) {}
     }
 
     private void finishScan(String url, String error) {
@@ -210,39 +217,6 @@ public class MainActivity extends Activity {
             stateText.setText(error);
             Toast.makeText(this, error, Toast.LENGTH_LONG).show();
         }
-    }
-
-    private String getLocalPrivateIpv4() {
-        try {
-            for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                if (!ni.isUp() || ni.isLoopback()) continue;
-                String name = ni.getName() == null ? "" : ni.getName().toLowerCase();
-                if (!name.startsWith("wlan") && !name.startsWith("wifi")) continue;
-                for (InetAddress a : Collections.list(ni.getInetAddresses())) {
-                    if (a instanceof Inet4Address && isPrivate(a.getHostAddress())) return a.getHostAddress();
-                }
-            }
-            for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                if (!ni.isUp() || ni.isLoopback()) continue;
-                for (InetAddress a : Collections.list(ni.getInetAddresses())) {
-                    if (a instanceof Inet4Address && isPrivate(a.getHostAddress())) return a.getHostAddress();
-                }
-            }
-        } catch (Exception ignored) {}
-        return null;
-    }
-
-    private boolean isPrivate(String host) {
-        if (host == null) return false;
-        if (host.startsWith("10.") || host.startsWith("192.168.")) return true;
-        if (host.startsWith("172.")) {
-            try {
-                String[] p = host.split("\\.");
-                int second = Integer.parseInt(p[1]);
-                return second >= 16 && second <= 31;
-            } catch (Exception ignored) {}
-        }
-        return false;
     }
 
     private void connectToServer() {
@@ -269,8 +243,21 @@ public class MainActivity extends Activity {
         try {
             URI u = new URI(value);
             String host = u.getHost();
-            return "http".equalsIgnoreCase(u.getScheme()) && host != null && (isPrivate(host) || host.equals("127.0.0.1") || host.equalsIgnoreCase("localhost"));
+            return "http".equalsIgnoreCase(u.getScheme()) && host != null && isPrivate(host);
         } catch (Exception e) { return false; }
+    }
+
+    private boolean isPrivate(String host) {
+        if (host == null) return false;
+        if (host.startsWith("10.") || host.startsWith("192.168.")) return true;
+        if (host.startsWith("172.")) {
+            try {
+                String[] p = host.split("\\.");
+                int second = Integer.parseInt(p[1]);
+                return second >= 16 && second <= 31;
+            } catch (Exception ignored) {}
+        }
+        return false;
     }
 
     @Override
