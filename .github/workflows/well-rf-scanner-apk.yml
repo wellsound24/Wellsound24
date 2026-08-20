@@ -33,6 +33,18 @@ jobs:
         working-directory: well-rf-scanner-native
         run: gradle :app:assembleDebug --stacktrace
 
+      - name: Save built APK
+        run: |
+          mkdir -p build-artifacts
+          cp well-rf-scanner-native/app/build/outputs/apk/debug/app-debug.apk build-artifacts/WELL_RF_Scanner_Pro_v5_Built.apk
+
+      - name: Upload built APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WELL_RF_Scanner_Pro_v5_Built
+          path: build-artifacts/WELL_RF_Scanner_Pro_v5_Built.apk
+          if-no-files-found: error
+
       - name: Launch-test APK on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -47,15 +59,3 @@ jobs:
             adb shell am start -n com.well.rfscanner/.MainActivity
             sleep 12
             bash -lc 'PID=$(adb shell pidof com.well.rfscanner | tr -d "\r"); echo PID=$PID; if [ -z "$PID" ]; then echo APP_PROCESS_NOT_RUNNING; adb logcat -d | grep -E -A80 -B20 "FATAL EXCEPTION|AndroidRuntime|com.well.rfscanner" || adb logcat -d | tail -n 400; exit 1; fi; adb shell uiautomator dump /sdcard/window.xml >/dev/null || true; adb pull /sdcard/window.xml /tmp/window.xml >/dev/null || true; test -f /tmp/window.xml || { echo UI_DUMP_MISSING; adb logcat -d | tail -n 400; exit 1; }; cat /tmp/window.xml; grep -q "WELL RF SCANNER PRO" /tmp/window.xml; grep -q "APP START OK" /tmp/window.xml; if adb logcat -d | grep -E "FATAL EXCEPTION|Process: com.well.rfscanner"; then echo APP_CRASH_DETECTED; exit 1; fi; echo ANDROID_LAUNCH_TEST=PASS'
-
-      - name: Save APK
-        run: |
-          mkdir -p build-artifacts
-          cp well-rf-scanner-native/app/build/outputs/apk/debug/app-debug.apk build-artifacts/WELL_RF_Scanner_Pro_v5_LaunchVerified.apk
-
-      - name: Upload verified APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: WELL_RF_Scanner_Pro_v5_LaunchVerified
-          path: build-artifacts/WELL_RF_Scanner_Pro_v5_LaunchVerified.apk
-          if-no-files-found: error
