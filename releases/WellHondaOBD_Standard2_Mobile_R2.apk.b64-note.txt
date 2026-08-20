@@ -1,0 +1,1 @@
+Binary APK R2 is available as a successful GitHub Actions artifact from run 32355924297. Package applicationId changed to com.wellhonda.obdpro.standard2 to avoid conflict with previously installed builds.
