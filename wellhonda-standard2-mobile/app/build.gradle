@@ -1,0 +1,19 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.wellhonda.obdpro'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.wellhonda.obdpro"
+        minSdk 26
+        targetSdk 35
+        versionCode 20
+        versionName "2.0-standard2-mobile"
+    }
+}
+
+dependencies {
+}
