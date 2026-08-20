@@ -28,22 +28,23 @@ public class MainActivity extends Activity {
     private static final int REALTEK_VID = 0x0BDA;
     private static final int RTL2838_PID = 0x2838;
 
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private UsbManager usbManager;
     private UsbDevice activeDevice;
     private UsbDeviceConnection activeConnection;
     private TextView statusText;
     private TextView engineText;
     private TextView deviceText;
-    private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean permissionReceiverRegistered = false;
+    private boolean usbEngineStarted = false;
 
     private final BroadcastReceiver permissionReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
             try {
                 if (!ACTION_USB_PERMISSION.equals(intent.getAction())) return;
-                UsbDevice device = getUsbDevice(intent);
+                UsbDevice d = getUsbDevice(intent);
                 boolean granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
-                if (granted && device != null) openUsb(device);
+                if (granted && d != null) openUsb(d);
                 else setStatus(false, "พบ Well Connect USB แต่ยังไม่ได้อนุญาต USB");
             } catch (Throwable t) {
                 setStatus(false, "USB permission error: " + t.getClass().getSimpleName());
@@ -53,52 +54,24 @@ public class MainActivity extends Activity {
 
     private final Runnable autoCheck = new Runnable() {
         @Override public void run() {
+            if (!usbEngineStarted) return;
             try { autoDetectUsb(); }
             catch (Throwable t) { setStatus(false, "USB scan error: " + t.getClass().getSimpleName()); }
-            handler.postDelayed(this, 1200);
+            handler.postDelayed(this, 1500);
         }
     };
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        buildUi();
-        handler.postDelayed(() -> initUsbSafely(getIntent()), 500);
-    }
-
-    private void initUsbSafely(Intent launchIntent) {
         try {
-            usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-            registerPermissionReceiverSafely();
-            UsbDevice fromIntent = getUsbDevice(launchIntent);
-            if (fromIntent != null && isRtlCandidate(fromIntent)) requestOrOpen(fromIntent);
-            handler.removeCallbacks(autoCheck);
-            handler.post(autoCheck);
+            buildUi();
         } catch (Throwable t) {
-            setStatus(false, "Startup USB error: " + t.getClass().getSimpleName());
+            showFatalUi("UI startup error", t);
+            return;
         }
-    }
 
-    private void registerPermissionReceiverSafely() {
-        if (permissionReceiverRegistered) return;
-        try {
-            IntentFilter f = new IntentFilter(ACTION_USB_PERMISSION);
-            if (Build.VERSION.SDK_INT >= 33) {
-                registerReceiver(permissionReceiver, f, Context.RECEIVER_NOT_EXPORTED);
-            } else {
-                registerReceiver(permissionReceiver, f);
-            }
-            permissionReceiverRegistered = true;
-        } catch (Throwable t) {
-            permissionReceiverRegistered = false;
-            setStatus(false, "USB receiver error: " + t.getClass().getSimpleName());
-        }
-    }
-
-    @SuppressWarnings("deprecation")
-    private UsbDevice getUsbDevice(Intent intent) {
-        if (intent == null) return null;
-        if (Build.VERSION.SDK_INT >= 33) return intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice.class);
-        return (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+        // SAFE BOOT: do not touch USB during Activity startup.
+        handler.postDelayed(this::startUsbEngineSafely, 2500);
     }
 
     private void buildUi() {
@@ -113,11 +86,11 @@ public class MainActivity extends Activity {
         title.setTextColor(Color.WHITE);
         title.setTextSize(24);
         title.setGravity(Gravity.CENTER_HORIZONTAL);
-        title.setPadding(0, dp(8), 0, dp(10));
+        title.setPadding(0, dp(10), 0, dp(8));
         root.addView(title);
 
         TextView sub = new TextView(this);
-        sub.setText("Native USB Safe Launch v3");
+        sub.setText("Native USB Safe Boot v4");
         sub.setTextColor(Color.rgb(148, 163, 184));
         sub.setTextSize(13);
         sub.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -125,37 +98,38 @@ public class MainActivity extends Activity {
         root.addView(sub);
 
         deviceText = makeInfo("Device: Well Connect USB");
+        statusText = makeInfo("Status: APP READY — USB จะเริ่มหลังหน้าแอปเปิดแล้ว");
+        engineText = makeInfo("USB Engine: SAFE BOOT");
         root.addView(deviceText);
-        statusText = makeInfo("Status: APP READY — กำลังเริ่มระบบ USB...");
         root.addView(statusText);
-        engineText = makeInfo("USB Engine: STARTING");
         root.addView(engineText);
 
-        Button connectButton = makeButton("CONNECT", Color.rgb(22, 163, 74));
-        connectButton.setOnClickListener(v -> {
+        Button connect = makeButton("CONNECT", Color.rgb(22, 163, 74));
+        connect.setOnClickListener(v -> {
             pressEffect(v);
-            try {
-                if (usbManager == null) usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-                registerPermissionReceiverSafely();
-                UsbDevice d = findRtlDevice();
-                if (d != null) requestOrOpen(d);
-                else setStatus(false, "ไม่พบ Well Connect USB");
-            } catch (Throwable t) {
-                setStatus(false, "Connect error: " + t.getClass().getSimpleName());
-            }
+            startUsbEngineSafely();
+            handler.postDelayed(() -> {
+                try {
+                    UsbDevice d = findRtlDevice();
+                    if (d == null) setStatus(false, "ไม่พบ Well Connect USB");
+                    else requestOrOpen(d);
+                } catch (Throwable t) {
+                    setStatus(false, "Connect error: " + t.getClass().getSimpleName());
+                }
+            }, 100);
         });
-        root.addView(connectButton);
+        root.addView(connect);
 
-        Button disconnectButton = makeButton("DISCONNECT", Color.rgb(185, 28, 28));
-        disconnectButton.setOnClickListener(v -> {
+        Button disconnect = makeButton("DISCONNECT", Color.rgb(185, 28, 28));
+        disconnect.setOnClickListener(v -> {
             pressEffect(v);
             closeUsb();
             setStatus(false, "Well Connect USB — DISCONNECTED");
         });
-        root.addView(disconnectButton);
+        root.addView(disconnect);
 
         TextView note = new TextView(this);
-        note.setText("v3 เปิดหน้าแอปก่อน แล้วค่อยเริ่ม USB ภายหลัง เพื่อตัดสาเหตุแอปเด้งตอนเริ่มต้น\n\nAuto Connect ใช้การตรวจหาอุปกรณ์ทุก 1.2 วินาที จึงไม่ต้องพึ่ง USB attach receiver ตอนเปิดแอป");
+        note.setText("v4 Safe Boot: ตอนเปิดแอปจะไม่เรียก USB API ใด ๆ เป็นเวลา 2.5 วินาที เพื่อให้หน้าโปรแกรมเปิดก่อนแน่นอน แล้วจึงเริ่มตรวจหา Well Connect USB อัตโนมัติ\n\nหาก USB มีข้อผิดพลาด แอปจะแสดงชนิด error ในช่อง Status แทนการปิดตัวเอง");
         note.setTextColor(Color.rgb(148, 163, 184));
         note.setTextSize(13);
         note.setPadding(0, dp(18), 0, dp(18));
@@ -164,6 +138,111 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.addView(root);
         setContentView(scroll);
+    }
+
+    private void startUsbEngineSafely() {
+        if (usbEngineStarted) return;
+        try {
+            usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+            if (usbManager == null) {
+                setStatus(false, "อุปกรณ์นี้ไม่มี Android USB Host service");
+                return;
+            }
+            registerPermissionReceiverSafely();
+            usbEngineStarted = true;
+            if (engineText != null) engineText.setText("USB Engine: AUTO SCAN");
+            handler.removeCallbacks(autoCheck);
+            handler.post(autoCheck);
+        } catch (Throwable t) {
+            usbEngineStarted = false;
+            setStatus(false, "USB engine error: " + t.getClass().getSimpleName());
+        }
+    }
+
+    private void registerPermissionReceiverSafely() {
+        if (permissionReceiverRegistered) return;
+        try {
+            IntentFilter f = new IntentFilter(ACTION_USB_PERMISSION);
+            if (Build.VERSION.SDK_INT >= 33) registerReceiver(permissionReceiver, f, Context.RECEIVER_NOT_EXPORTED);
+            else registerReceiver(permissionReceiver, f);
+            permissionReceiverRegistered = true;
+        } catch (Throwable t) {
+            permissionReceiverRegistered = false;
+            setStatus(false, "USB receiver error: " + t.getClass().getSimpleName());
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private UsbDevice getUsbDevice(Intent intent) {
+        if (intent == null) return null;
+        if (Build.VERSION.SDK_INT >= 33) return intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice.class);
+        return (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+    }
+
+    private boolean isRtlCandidate(UsbDevice d) {
+        return d != null && (d.getVendorId() == REALTEK_VID || d.getProductId() == RTL2838_PID);
+    }
+
+    private UsbDevice findRtlDevice() {
+        if (usbManager == null) return null;
+        HashMap<String, UsbDevice> list = usbManager.getDeviceList();
+        if (list == null) return null;
+        for (UsbDevice d : list.values()) if (isRtlCandidate(d)) return d;
+        return null;
+    }
+
+    private void autoDetectUsb() {
+        UsbDevice d = findRtlDevice();
+        if (d == null) {
+            if (activeConnection == null) setStatus(false, "Well Connect USB — DISCONNECTED");
+            return;
+        }
+        if (activeConnection == null) requestOrOpen(d);
+    }
+
+    private PendingIntent permissionIntent() {
+        Intent i = new Intent(ACTION_USB_PERMISSION).setPackage(getPackageName());
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
+        return PendingIntent.getBroadcast(this, 404, i, flags);
+    }
+
+    private void requestOrOpen(UsbDevice d) {
+        if (d == null || usbManager == null) return;
+        if (activeConnection != null && activeDevice != null && activeDevice.getDeviceId() == d.getDeviceId()) return;
+        try {
+            if (usbManager.hasPermission(d)) openUsb(d);
+            else {
+                setStatus(false, "พบ Well Connect USB — รออนุญาต USB");
+                usbManager.requestPermission(d, permissionIntent());
+            }
+        } catch (Throwable t) {
+            setStatus(false, "USB permission request error: " + t.getClass().getSimpleName());
+        }
+    }
+
+    private void openUsb(UsbDevice d) {
+        try {
+            closeUsb();
+            UsbDeviceConnection c = usbManager.openDevice(d);
+            if (c == null) {
+                setStatus(false, "เปิด Well Connect USB ไม่สำเร็จ");
+                return;
+            }
+            activeDevice = d;
+            activeConnection = c;
+            setStatus(true, "Well Connect USB — CONNECTED");
+        } catch (Throwable t) {
+            setStatus(false, "USB open error: " + t.getClass().getSimpleName());
+        }
+    }
+
+    private void closeUsb() {
+        if (activeConnection != null) {
+            try { activeConnection.close(); } catch (Throwable ignored) {}
+        }
+        activeConnection = null;
+        activeDevice = null;
     }
 
     private TextView makeInfo(String text) {
@@ -192,107 +271,55 @@ public class MainActivity extends Activity {
     }
 
     private void pressEffect(View v) {
-        v.animate().translationY(dp(2)).scaleX(0.98f).scaleY(0.98f).setDuration(60)
-                .withEndAction(() -> v.animate().translationY(0).scaleX(1f).scaleY(1f).setDuration(80).start()).start();
+        try {
+            v.animate().translationY(dp(2)).scaleX(0.98f).scaleY(0.98f).setDuration(60)
+                    .withEndAction(() -> v.animate().translationY(0).scaleX(1f).scaleY(1f).setDuration(80).start()).start();
+        } catch (Throwable ignored) {}
     }
 
     private int dp(int value) {
-        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
-    }
-
-    private boolean isRtlCandidate(UsbDevice d) {
-        return d != null && (d.getVendorId() == REALTEK_VID || d.getProductId() == RTL2838_PID);
-    }
-
-    private UsbDevice findRtlDevice() {
-        if (usbManager == null) return null;
-        HashMap<String, UsbDevice> list = usbManager.getDeviceList();
-        for (UsbDevice d : list.values()) if (isRtlCandidate(d)) return d;
-        return null;
-    }
-
-    private void autoDetectUsb() {
-        if (usbManager == null) return;
-        UsbDevice d = findRtlDevice();
-        if (d != null) {
-            if (activeConnection == null) requestOrOpen(d);
-        } else if (activeConnection == null) {
-            setStatus(false, "Well Connect USB — DISCONNECTED");
-        }
-    }
-
-    private PendingIntent permissionIntent() {
-        Intent i = new Intent(ACTION_USB_PERMISSION).setPackage(getPackageName());
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
-        return PendingIntent.getBroadcast(this, 101, i, flags);
-    }
-
-    private void requestOrOpen(UsbDevice d) {
-        if (d == null || usbManager == null) return;
-        if (activeConnection != null && activeDevice != null && activeDevice.getDeviceId() == d.getDeviceId()) return;
-        if (usbManager.hasPermission(d)) {
-            openUsb(d);
-        } else {
-            setStatus(false, "พบ Well Connect USB — รออนุญาตการเชื่อมต่อ");
-            registerPermissionReceiverSafely();
-            usbManager.requestPermission(d, permissionIntent());
-        }
-    }
-
-    private void openUsb(UsbDevice d) {
-        try {
-            closeUsb();
-            UsbDeviceConnection c = usbManager.openDevice(d);
-            if (c == null) {
-                setStatus(false, "เปิด Well Connect USB ไม่สำเร็จ");
-                return;
-            }
-            activeDevice = d;
-            activeConnection = c;
-            setStatus(true, "Well Connect USB — CONNECTED");
-        } catch (Throwable t) {
-            setStatus(false, "USB open error: " + t.getClass().getSimpleName());
-        }
-    }
-
-    private void closeUsb() {
-        if (activeConnection != null) {
-            try { activeConnection.close(); } catch (Exception ignored) {}
-        }
-        activeConnection = null;
-        activeDevice = null;
+        return (int)(value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private void setStatus(boolean connected, String text) {
-        runOnUiThread(() -> {
-            if (statusText != null) {
-                statusText.setText("Status: " + text);
-                statusText.setTextColor(connected ? Color.rgb(74, 222, 128) : Color.WHITE);
-            }
-            if (engineText != null) engineText.setText("USB Engine: " + (connected ? "USB READY" : "IDLE"));
-            if (deviceText != null) deviceText.setText("Device: Well Connect USB");
-        });
+        try {
+            runOnUiThread(() -> {
+                if (statusText != null) {
+                    statusText.setText("Status: " + text);
+                    statusText.setTextColor(connected ? Color.rgb(74, 222, 128) : Color.WHITE);
+                }
+                if (engineText != null) engineText.setText("USB Engine: " + (connected ? "USB READY" : (usbEngineStarted ? "AUTO SCAN" : "SAFE BOOT")));
+                if (deviceText != null) deviceText.setText("Device: Well Connect USB");
+            });
+        } catch (Throwable ignored) {}
     }
 
-    @Override protected void onResume() {
-        super.onResume();
-        handler.postDelayed(() -> {
-            try { autoDetectUsb(); } catch (Throwable ignored) {}
-        }, 300);
-    }
-
-    @Override protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        handler.postDelayed(() -> initUsbSafely(intent), 250);
+    private void showFatalUi(String titleText, Throwable t) {
+        try {
+            LinearLayout root = new LinearLayout(this);
+            root.setOrientation(LinearLayout.VERTICAL);
+            root.setPadding(dp(18), dp(30), dp(18), dp(18));
+            root.setBackgroundColor(Color.BLACK);
+            TextView title = new TextView(this);
+            title.setText("WELL RF SCANNER PRO\n" + titleText);
+            title.setTextColor(Color.WHITE);
+            title.setTextSize(20);
+            TextView err = new TextView(this);
+            err.setText("\n" + t.getClass().getName() + "\n" + String.valueOf(t.getMessage()));
+            err.setTextColor(Color.WHITE);
+            err.setTextSize(14);
+            root.addView(title);
+            root.addView(err);
+            setContentView(root);
+        } catch (Throwable ignored) {}
     }
 
     @Override protected void onDestroy() {
+        usbEngineStarted = false;
         handler.removeCallbacks(autoCheck);
         closeUsb();
         if (permissionReceiverRegistered) {
-            try { unregisterReceiver(permissionReceiver); } catch (Exception ignored) {}
+            try { unregisterReceiver(permissionReceiver); } catch (Throwable ignored) {}
         }
         super.onDestroy();
     }
