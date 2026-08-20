@@ -1,12 +1,9 @@
-name: Build Well Honda Standard 2 Mobile APK
+name: Build Well Honda Standard 2 Online R5
 
 on:
   push:
     branches:
       - wellhonda-standard2-mobile
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -33,32 +30,26 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Restore MainActivity source
-        working-directory: wellhonda-standard2-mobile
-        run: |
-          mkdir -p app/src/main/java/com/wellhonda/obdpro
-          base64 -d MainActivity.java.b64 > app/src/main/java/com/wellhonda/obdpro/MainActivity.java
-
-      - name: Build installable APK
-        working-directory: wellhonda-standard2-mobile
+      - name: Build fresh installable APK
+        working-directory: wellhonda-standard2-online
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Prepare R4 APK
-        run: cp wellhonda-standard2-mobile/app/build/outputs/apk/debug/app-debug.apk WellHondaOBD_Standard2_Mobile_R4.apk
+      - name: Prepare R5 APK
+        run: cp wellhonda-standard2-online/app/build/outputs/apk/debug/app-debug.apk WellHondaOBD_Standard2_Online_R5.apk
 
       - name: Verify APK package and signature
         run: |
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          "$BUILD_TOOLS/aapt" dump badging WellHondaOBD_Standard2_Mobile_R4.apk | tee apk-badging.txt
-          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs WellHondaOBD_Standard2_Mobile_R4.apk | tee apk-signature.txt
-          grep -q "package: name='com.wellhonda.obdpro.standard2.r3'" apk-badging.txt
+          "$BUILD_TOOLS/aapt" dump badging WellHondaOBD_Standard2_Online_R5.apk | tee apk-badging.txt
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs WellHondaOBD_Standard2_Online_R5.apk | tee apk-signature.txt
+          grep -q "package: name='com.wellhonda.obdpro.standard2.online'" apk-badging.txt
           grep -q "Verified using v2 scheme (APK Signature Scheme v2): true" apk-signature.txt
 
       - name: Upload verified APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WellHondaOBD_Standard2_Mobile_R4_APK
-          path: WellHondaOBD_Standard2_Mobile_R4.apk
+          name: WellHondaOBD_Standard2_Online_R5_APK
+          path: WellHondaOBD_Standard2_Online_R5.apk
           if-no-files-found: error
 
       - name: Publish direct-download verified APK
@@ -71,8 +62,8 @@ jobs:
           rm -rf /tmp/wellhonda-release
           git worktree add /tmp/wellhonda-release origin/wellhonda-standard2-mobile-release
           mkdir -p /tmp/wellhonda-release/releases
-          cp WellHondaOBD_Standard2_Mobile_R4.apk /tmp/wellhonda-release/releases/WellHondaOBD_Standard2_Mobile_R4.apk
+          cp WellHondaOBD_Standard2_Online_R5.apk /tmp/wellhonda-release/releases/WellHondaOBD_Standard2_Online_R5.apk
           cd /tmp/wellhonda-release
-          git add releases/WellHondaOBD_Standard2_Mobile_R4.apk
-          git commit -m "Publish verified Standard 2 Mobile R4 APK" || true
+          git add releases/WellHondaOBD_Standard2_Online_R5.apk
+          git commit -m "Publish fresh Standard 2 Online R5 APK" || true
           git push origin HEAD:wellhonda-standard2-mobile-release
