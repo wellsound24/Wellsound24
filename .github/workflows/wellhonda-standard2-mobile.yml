@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - wellhonda-standard2-mobile
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
