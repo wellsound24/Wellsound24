@@ -1,0 +1,48 @@
+name: Build Well Honda Standard 2 Mobile APK
+
+on:
+  push:
+    branches:
+      - wellhonda-standard2-mobile
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Restore MainActivity source
+        working-directory: wellhonda-standard2-mobile
+        run: |
+          mkdir -p app/src/main/java/com/wellhonda/obdpro
+          base64 -d MainActivity.java.b64 > app/src/main/java/com/wellhonda/obdpro/MainActivity.java
+
+      - name: Build debug APK
+        working-directory: wellhonda-standard2-mobile
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Rename APK
+        run: cp wellhonda-standard2-mobile/app/build/outputs/apk/debug/app-debug.apk WellHondaOBD_Standard2_Mobile.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WellHondaOBD_Standard2_Mobile_APK
+          path: WellHondaOBD_Standard2_Mobile.apk
+          if-no-files-found: error
