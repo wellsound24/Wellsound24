@@ -10,8 +10,16 @@ android {
         applicationId "com.wellhonda.obdpro.standard2.online"
         minSdk 21
         targetSdk 34
-        versionCode 1
-        versionName "1.0-online"
+        versionCode 2
+        versionName "1.1-online-r6"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.debug
+        }
     }
 }
 
