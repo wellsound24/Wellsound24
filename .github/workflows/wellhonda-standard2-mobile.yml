@@ -54,7 +54,6 @@ jobs:
           if-no-files-found: error
 
       - name: Publish direct-download APK to release branch
-        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
