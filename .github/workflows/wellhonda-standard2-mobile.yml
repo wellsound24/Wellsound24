@@ -39,32 +39,40 @@ jobs:
           mkdir -p app/src/main/java/com/wellhonda/obdpro
           base64 -d MainActivity.java.b64 > app/src/main/java/com/wellhonda/obdpro/MainActivity.java
 
-      - name: Build debug APK
+      - name: Build installable APK
         working-directory: wellhonda-standard2-mobile
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Rename APK
-        run: cp wellhonda-standard2-mobile/app/build/outputs/apk/debug/app-debug.apk WellHondaOBD_Standard2_Mobile_R2.apk
+      - name: Prepare R3 APK
+        run: cp wellhonda-standard2-mobile/app/build/outputs/apk/debug/app-debug.apk WellHondaOBD_Standard2_Mobile_R3.apk
 
-      - name: Upload APK artifact
+      - name: Verify APK package and signature
+        run: |
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BUILD_TOOLS/aapt" dump badging WellHondaOBD_Standard2_Mobile_R3.apk | tee apk-badging.txt
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs WellHondaOBD_Standard2_Mobile_R3.apk | tee apk-signature.txt
+          grep -q "package: name='com.wellhonda.obdpro.standard2.r3'" apk-badging.txt
+          grep -q "Verified using v2 scheme (APK Signature Scheme v2): true" apk-signature.txt
+
+      - name: Upload verified APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WellHondaOBD_Standard2_Mobile_R2_APK
-          path: WellHondaOBD_Standard2_Mobile_R2.apk
+          name: WellHondaOBD_Standard2_Mobile_R3_APK
+          path: WellHondaOBD_Standard2_Mobile_R3.apk
           if-no-files-found: error
 
-      - name: Publish direct-download APK to release branch
+      - name: Publish direct-download verified APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin wellhonda-standard2-mobile-release
-          mkdir -p /tmp/wellhonda-release
+          rm -rf /tmp/wellhonda-release
           git worktree add /tmp/wellhonda-release origin/wellhonda-standard2-mobile-release
           mkdir -p /tmp/wellhonda-release/releases
-          cp WellHondaOBD_Standard2_Mobile_R2.apk /tmp/wellhonda-release/releases/WellHondaOBD_Standard2_Mobile_R2.apk
+          cp WellHondaOBD_Standard2_Mobile_R3.apk /tmp/wellhonda-release/releases/WellHondaOBD_Standard2_Mobile_R3.apk
           cd /tmp/wellhonda-release
-          git add releases/WellHondaOBD_Standard2_Mobile_R2.apk
-          git commit -m "Publish Standard 2 Mobile R2 APK" || true
+          git add releases/WellHondaOBD_Standard2_Mobile_R3.apk
+          git commit -m "Publish verified Standard 2 Mobile R3 APK" || true
           git push origin HEAD:wellhonda-standard2-mobile-release
