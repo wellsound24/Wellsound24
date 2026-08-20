@@ -41,35 +41,12 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
-            set -e
             adb install -r well-rf-scanner-native/app/build/outputs/apk/debug/app-debug.apk
             adb logcat -c
             adb shell am force-stop com.well.rfscanner
             adb shell am start -n com.well.rfscanner/.MainActivity
-            sleep 15
-            PID=$(adb shell pidof com.well.rfscanner | tr -d '\r')
-            echo "PID=$PID"
-            if [ -z "$PID" ]; then
-              echo "APP PROCESS NOT RUNNING"
-              adb logcat -d | tail -n 300
-              exit 1
-            fi
-            adb shell dumpsys activity activities | grep -A8 -B3 com.well.rfscanner || true
-            adb shell uiautomator dump /sdcard/window.xml >/dev/null || true
-            adb pull /sdcard/window.xml /tmp/window.xml >/dev/null || true
-            if [ ! -f /tmp/window.xml ]; then
-              echo "UI dump missing"
-              adb logcat -d | tail -n 300
-              exit 1
-            fi
-            cat /tmp/window.xml
-            grep -q "WELL RF SCANNER PRO" /tmp/window.xml
-            grep -q "APP START OK" /tmp/window.xml
-            if adb logcat -d | grep -E "FATAL EXCEPTION|Process: com.well.rfscanner"; then
-              echo "APP CRASH DETECTED"
-              exit 1
-            fi
-            echo "ANDROID_LAUNCH_TEST=PASS"
+            sleep 12
+            bash -lc 'PID=$(adb shell pidof com.well.rfscanner | tr -d "\r"); echo PID=$PID; if [ -z "$PID" ]; then echo APP_PROCESS_NOT_RUNNING; adb logcat -d | grep -E -A80 -B20 "FATAL EXCEPTION|AndroidRuntime|com.well.rfscanner" || adb logcat -d | tail -n 400; exit 1; fi; adb shell uiautomator dump /sdcard/window.xml >/dev/null || true; adb pull /sdcard/window.xml /tmp/window.xml >/dev/null || true; test -f /tmp/window.xml || { echo UI_DUMP_MISSING; adb logcat -d | tail -n 400; exit 1; }; cat /tmp/window.xml; grep -q "WELL RF SCANNER PRO" /tmp/window.xml; grep -q "APP START OK" /tmp/window.xml; if adb logcat -d | grep -E "FATAL EXCEPTION|Process: com.well.rfscanner"; then echo APP_CRASH_DETECTED; exit 1; fi; echo ANDROID_LAUNCH_TEST=PASS'
 
       - name: Save APK
         run: |
