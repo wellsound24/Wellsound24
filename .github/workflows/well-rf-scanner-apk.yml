@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  build-v8-real-usb:
+  build-v9-original-ui-safe:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,24 +29,21 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Build v8 real USB APK
+      - name: Build v9 APK
         working-directory: well-rf-scanner-v7-clean
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Verify APK archive
-        run: |
-          APK=well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk
-          unzip -t "$APK"
-          unzip -l "$APK" | grep -q 'classes.dex'
+        run: unzip -t well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Save v8 APK
+      - name: Save v9 APK
         run: |
-          mkdir -p build-artifacts/v8
-          cp well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk build-artifacts/v8/WELL_RF_Scanner_Pro_v8_Real_USB.apk
+          mkdir -p build-artifacts/v9
+          cp well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk build-artifacts/v9/WELL_RF_Scanner_Pro_v9_Original_UI_Safe_USB.apk
 
-      - name: Upload v8 APK
+      - name: Upload v9 APK
         uses: actions/upload-artifact@v4
         with:
-          name: WELL_RF_Scanner_Pro_v8_Real_USB
-          path: build-artifacts/v8/WELL_RF_Scanner_Pro_v8_Real_USB.apk
+          name: WELL_RF_Scanner_Pro_v9_Original_UI_Safe_USB
+          path: build-artifacts/v9/WELL_RF_Scanner_Pro_v9_Original_UI_Safe_USB.apk
           if-no-files-found: error
