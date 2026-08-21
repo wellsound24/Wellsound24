@@ -2,7 +2,6 @@ package com.well.rfscanner.v7;
 
 import android.app.Activity;
 import android.app.PendingIntent;
-import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -10,7 +9,6 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.webkit.JavascriptInterface;
@@ -19,34 +17,31 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-import java.io.InputStream;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.util.HashMap;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final String ACTION_USB_PERMISSION = "com.well.rfscanner.standard1.USB_PERMISSION";
     private static final int REALTEK_VID = 0x0BDA;
     private static final int RTL2838_PID = 0x2838;
-    private static final int IQSRC_REQUEST = 1234;
-    private static final int IQ_PORT = 14423;
-    private static final int SAMPLE_RATE = 2048000;
+    private static final int SAMPLE_RATE = 2_048_000;
+    private static final long CENTER_HZ = 700_000_000L;
 
     private WebView webView;
     private UsbManager usbManager;
     private UsbDeviceConnection activeConnection;
+    private DirectRtlSdr rtl;
     private boolean receiverRegistered = false;
     private volatile boolean iqRunning = false;
     private Thread iqThread;
-    private Socket iqSocket;
 
     private final BroadcastReceiver permissionReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
             if (!ACTION_USB_PERMISSION.equals(intent.getAction())) return;
             UsbDevice d = getUsbDevice(intent);
             boolean granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false);
-            if (granted && d != null) openDevice(d);
-            else js("nativeUsbDisconnected();document.getElementById('usbText').textContent='Well Connect USB — ไม่อนุญาต USB';");
+            if (granted && d != null) startDirectRf(d);
+            else js("nativeUsbDisconnected();document.getElementById('usbText').textContent='Well Connect USB — ไม่อนุญาต USB';document.getElementById('engineVal').textContent='IDLE';");
         }
     };
 
@@ -73,75 +68,72 @@ public class MainActivity extends Activity {
     }
 
     private void connectRf() {
-        js("document.getElementById('usbText').textContent='Well Connect USB — กำลังเปิด RF engine...';");
-        Intent iqIntent = new Intent(Intent.ACTION_VIEW);
-        iqIntent.setData(Uri.parse("iqsrc://-a 127.0.0.1 -p " + IQ_PORT + " -s " + SAMPLE_RATE));
         try {
-            startActivityForResult(iqIntent, IQSRC_REQUEST);
-        } catch (ActivityNotFoundException e) {
-            // Keep legacy USB detection as a diagnostic fallback, but do not generate fake RF data.
-            connectUsbDiagnostic();
-            js("document.getElementById('usbText').textContent='Well Connect USB — พบ USB แต่ยังไม่มี RTL-SDR IQ driver';document.getElementById('engineVal').textContent='DRIVER NEEDED';");
+            js("document.getElementById('usbText').textContent='Well Connect USB — กำลังเปิด RTL-SDR โดยตรง...';document.getElementById('engineVal').textContent='STARTING';");
+            usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+            if (usbManager == null) {
+                js("document.getElementById('usbText').textContent='Well Connect USB — USB HOST ไม่พร้อม';document.getElementById('engineVal').textContent='IDLE';");
+                return;
+            }
+            registerReceiverOnce();
+            UsbDevice d = findRtl();
+            if (d == null) {
+                js("document.getElementById('usbText').textContent='Well Connect USB — ไม่พบ RTL-SDR';document.getElementById('engineVal').textContent='IDLE';");
+                return;
+            }
+            if (usbManager.hasPermission(d)) startDirectRf(d);
+            else {
+                Intent i = new Intent(ACTION_USB_PERMISSION).setPackage(getPackageName());
+                int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+                if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
+                usbManager.requestPermission(d, PendingIntent.getBroadcast(this, 77, i, flags));
+                js("document.getElementById('usbText').textContent='Well Connect USB — รออนุญาต USB';");
+            }
+        } catch (Throwable t) {
+            showRfError(t);
         }
     }
 
-    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != IQSRC_REQUEST) return;
-        if (resultCode == RESULT_OK) {
-            js("nativeUsbConnected();document.getElementById('usbText').textContent='Well Connect USB — RF IQ CONNECTED';document.getElementById('engineVal').textContent='REAL IQ';");
-            startIqTcp();
-        } else {
-            String msg = data != null ? data.getStringExtra("detailed_exception_message") : null;
-            if (msg == null || msg.length() == 0) msg = "เปิด RTL-SDR ไม่สำเร็จ";
-            final String safe = msg.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ");
-            js("nativeUsbDisconnected();document.getElementById('usbText').textContent='Well Connect USB — " + safe + "';document.getElementById('engineVal').textContent='IDLE';");
+    private void startDirectRf(UsbDevice d) {
+        stopIq();
+        closeUsb();
+        try {
+            activeConnection = usbManager.openDevice(d);
+            if (activeConnection == null) throw new Exception("เปิด USB ไม่สำเร็จ");
+            rtl = new DirectRtlSdr(d, activeConnection, 0.5);
+            rtl.open();
+            int actualRate = rtl.setSampleRate(SAMPLE_RATE);
+            long actualCenter = rtl.setCenterFrequency(CENTER_HZ);
+            rtl.resetBuffer();
+
+            double halfMhz = actualRate / 2_000_000.0;
+            double centerMhz = actualCenter / 1_000_000.0;
+            String jsCode = String.format(Locale.US,
+                    "window.nativeCaptureStart=%.6f;window.nativeCaptureEnd=%.6f;nativeUsbConnected();document.getElementById('usbText').textContent='Well Connect USB — REAL RF %.3f MHz';document.getElementById('engineVal').textContent='REAL IQ';",
+                    centerMhz-halfMhz, centerMhz+halfMhz, centerMhz);
+            js(jsCode);
+            startIq();
+        } catch (Throwable t) {
+            showRfError(t);
+            closeUsb();
         }
     }
 
-    private void startIqTcp() {
-        stopIqTcp();
+    private void startIq() {
         iqRunning = true;
         iqThread = new Thread(() -> {
+            byte[] buf = new byte[16 * 1024];
             try {
-                Socket s = new Socket();
-                iqSocket = s;
-                boolean connected = false;
-                for (int n = 0; n < 30 && iqRunning; n++) {
-                    try {
-                        s.connect(new InetSocketAddress("127.0.0.1", IQ_PORT), 500);
-                        connected = true;
-                        break;
-                    } catch (Throwable ignored) {
-                        try { Thread.sleep(150); } catch (InterruptedException ie) { return; }
-                        if (!s.isConnected()) s = new Socket();
-                        iqSocket = s;
-                    }
-                }
-                if (!connected) throw new Exception("IQ TCP connect timeout");
-                InputStream in = s.getInputStream();
-                byte[] header = new byte[12];
-                int hp = 0;
-                while (hp < 12 && iqRunning) {
-                    int r = in.read(header, hp, 12 - hp);
-                    if (r < 0) throw new Exception("IQ header EOF");
-                    hp += r;
-                }
-                byte[] buf = new byte[16384];
-                while (iqRunning) {
-                    int r = in.read(buf);
-                    if (r <= 0) break;
+                while (iqRunning && rtl != null) {
+                    int r = rtl.read(buf, 1000);
+                    if (r < 0) continue;
                     if ((r & 1) != 0) r--;
                     if (r >= 2048) pushSpectrumFromIq(buf, r);
                 }
             } catch (Throwable t) {
-                if (iqRunning) js("document.getElementById('usbText').textContent='Well Connect USB — IQ stream หลุด';document.getElementById('engineVal').textContent='IDLE';");
-            } finally {
-                iqRunning = false;
-                try { if (iqSocket != null) iqSocket.close(); } catch (Throwable ignored) {}
-                iqSocket = null;
+                if (iqRunning) showRfError(t);
             }
-        }, "WellRF-IQ");
+        }, "WellRF-DirectIQ");
         iqThread.start();
     }
 
@@ -156,7 +148,6 @@ public class MainActivity extends Activity {
         }
         meanI /= n; meanQ /= n;
         float[] out = new float[bins];
-        // Lightweight DFT with Hann window. This is intentionally capped to 192 bins for phone CPU load.
         for (int k = 0; k < bins; k++) {
             int signedK = k - bins / 2;
             double re = 0, im = 0;
@@ -176,46 +167,26 @@ public class MainActivity extends Activity {
             if (norm > 1) norm = 1;
             out[k] = (float) norm;
         }
-        StringBuilder sb = new StringBuilder(1600);
+        StringBuilder sb = new StringBuilder(1800);
         sb.append("data=[");
         for (int i = 0; i < out.length; i++) {
             if (i > 0) sb.append(',');
-            sb.append(String.format(java.util.Locale.US, "%.4f", out[i]));
+            sb.append(String.format(Locale.US, "%.4f", out[i]));
         }
         sb.append("];if(typeof draw==='function'){draw();waterfall();metrics();}");
         js(sb.toString());
     }
 
     private void disconnectRf() {
-        stopIqTcp();
+        stopIq();
         closeUsb();
-        js("nativeUsbDisconnected();document.getElementById('engineVal').textContent='IDLE';");
+        js("window.nativeCaptureStart=null;window.nativeCaptureEnd=null;nativeUsbDisconnected();document.getElementById('engineVal').textContent='IDLE';");
     }
 
-    private void stopIqTcp() {
+    private void stopIq() {
         iqRunning = false;
-        try { if (iqSocket != null) iqSocket.close(); } catch (Throwable ignored) {}
-        iqSocket = null;
         if (iqThread != null) iqThread.interrupt();
         iqThread = null;
-    }
-
-    private void connectUsbDiagnostic() {
-        try {
-            usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
-            if (usbManager == null) return;
-            registerReceiverOnce();
-            UsbDevice d = findRtl();
-            if (d == null) return;
-            if (usbManager.hasPermission(d)) openDevice(d);
-            else {
-                Intent i = new Intent(ACTION_USB_PERMISSION).setPackage(getPackageName());
-                int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-                if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
-                PendingIntent pi = PendingIntent.getBroadcast(this, 77, i, flags);
-                usbManager.requestPermission(d, pi);
-            }
-        } catch (Throwable ignored) {}
     }
 
     private void registerReceiverOnce() {
@@ -230,22 +201,24 @@ public class MainActivity extends Activity {
         HashMap<String, UsbDevice> devices = usbManager.getDeviceList();
         for (UsbDevice d : devices.values()) {
             if (d.getVendorId() == REALTEK_VID && d.getProductId() == RTL2838_PID) return d;
-            if (d.getVendorId() == REALTEK_VID) return d;
         }
+        for (UsbDevice d : devices.values()) if (d.getVendorId() == REALTEK_VID) return d;
         return null;
     }
 
-    private void openDevice(UsbDevice d) {
-        closeUsb();
-        activeConnection = usbManager.openDevice(d);
-        if (activeConnection != null) js("document.getElementById('usbText').textContent='Well Connect USB — USB DETECTED';");
-    }
-
     private void closeUsb() {
+        try { if (rtl != null) rtl.close(); } catch (Throwable ignored) {}
+        rtl = null;
         if (activeConnection != null) {
             try { activeConnection.close(); } catch (Throwable ignored) {}
         }
         activeConnection = null;
+    }
+
+    private void showRfError(Throwable t) {
+        String msg = t == null || t.getMessage() == null ? "RF ERROR" : t.getMessage();
+        msg = msg.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ");
+        js("nativeUsbDisconnected();document.getElementById('usbText').textContent='Well Connect USB — " + msg + "';document.getElementById('engineVal').textContent='IDLE';");
     }
 
     private void js(String code) {
@@ -265,7 +238,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
-        stopIqTcp();
+        stopIq();
         closeUsb();
         if (receiverRegistered) {
             try { unregisterReceiver(permissionReceiver); } catch (Throwable ignored) {}
