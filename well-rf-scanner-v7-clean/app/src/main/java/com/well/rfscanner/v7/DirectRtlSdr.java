@@ -9,8 +9,8 @@ import android.hardware.usb.UsbInterface;
 import java.io.IOException;
 
 /**
- * Minimal direct RTL2832U + R820T/R820T2 driver for Android USB Host.
- * Ported from the Apache-2.0 rtlsdrjs register flow by Sandeep Mistry / Google.
+ * Direct RTL2832U + R820T/R820T2 driver for Android USB Host.
+ * Register flow follows the Apache-2.0 rtlsdrjs implementation.
  */
 public final class DirectRtlSdr {
     private static final int BLOCK_USB = 0x100;
@@ -26,7 +26,8 @@ public final class DirectRtlSdr {
 
     private static final int XTAL_FREQ = 28_800_000;
     private static final int IF_FREQ = 3_570_000;
-    private static final int TIMEOUT = 1200;
+    private static final int TIMEOUT = 3500;
+    private static final int CTRL_RETRIES = 3;
 
     private final UsbDevice device;
     private final UsbDeviceConnection conn;
@@ -45,6 +46,14 @@ public final class DirectRtlSdr {
     public void open() throws IOException {
         if (device.getInterfaceCount() < 1) throw new IOException("RTL-SDR interface missing");
         iface = device.getInterface(0);
+
+        // IMPORTANT: initialize the RTL2832U USB block before claiming interface 0.
+        // This mirrors the known-working librtlsdr/rtlsdrjs startup order and avoids
+        // Samsung/Android devices returning -1 on the first demodulator control write.
+        writeReg(BLOCK_USB, REG_SYSCTL, 0x09, 1);
+        writeReg(BLOCK_USB, REG_EPA_MAXPKT, 0x0200, 2);
+        writeReg(BLOCK_USB, REG_EPA_CTL, 0x0210, 2);
+
         if (!conn.claimInterface(iface, true)) throw new IOException("Claim USB interface failed");
         for (int i = 0; i < iface.getEndpointCount(); i++) {
             UsbEndpoint ep = iface.getEndpoint(i);
@@ -54,10 +63,6 @@ public final class DirectRtlSdr {
             }
         }
         if (bulkIn == null) throw new IOException("RTL-SDR bulk IN endpoint missing");
-
-        writeReg(BLOCK_USB, REG_SYSCTL, 0x09, 1);
-        writeReg(BLOCK_USB, REG_EPA_MAXPKT, 0x0200, 2);
-        writeReg(BLOCK_USB, REG_EPA_CTL, 0x0210, 2);
 
         writeReg(BLOCK_SYS, REG_DEMOD_CTL_1, 0x22, 1);
         writeReg(BLOCK_SYS, REG_DEMOD_CTL, 0xe8, 1);
@@ -130,7 +135,7 @@ public final class DirectRtlSdr {
 
     public int read(byte[] buffer, int timeoutMs) {
         if (bulkIn == null || conn == null) return -1;
-        return conn.bulkTransfer(bulkIn, buffer, buffer.length, Math.max(200, timeoutMs));
+        return conn.bulkTransfer(bulkIn, buffer, buffer.length, Math.max(300, timeoutMs));
     }
 
     public void close() {
@@ -143,31 +148,53 @@ public final class DirectRtlSdr {
         demodWrite(1, 0x01, 0x10, 1);
     }
 
+    private int ctrlOut(int value, int index, byte[] data, String where) throws IOException {
+        int r = -1;
+        for (int n=0; n<CTRL_RETRIES; n++) {
+            r = conn.controlTransfer(UsbConstants.USB_DIR_OUT | UsbConstants.USB_TYPE_VENDOR,
+                    0, value, index, data, data.length, TIMEOUT);
+            if (r >= 0) return r;
+            try { Thread.sleep(25L * (n + 1)); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
+        throw new IOException(where + " failed v=0x" + Integer.toHexString(value) + " i=0x" + Integer.toHexString(index) + " rc=" + r);
+    }
+
+    private int ctrlIn(int value, int index, byte[] data, int length, String where) throws IOException {
+        int r = -1;
+        for (int n=0; n<CTRL_RETRIES; n++) {
+            r = conn.controlTransfer(UsbConstants.USB_DIR_IN | UsbConstants.USB_TYPE_VENDOR,
+                    0, value, index, data, length, TIMEOUT);
+            if (r >= 0) return r;
+            try { Thread.sleep(25L * (n + 1)); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
+        throw new IOException(where + " failed v=0x" + Integer.toHexString(value) + " i=0x" + Integer.toHexString(index) + " rc=" + r);
+    }
+
     private void writeReg(int block, int reg, int value, int len) throws IOException {
         byte[] b = numberToBytes(value, len, false);
-        int r = conn.controlTransfer(0x40, 0, reg, block | WRITE_FLAG, b, b.length, TIMEOUT);
-        if (r < 0) throw new IOException("USB write reg failed");
+        int r = ctrlOut(reg, block | WRITE_FLAG, b, "USB write reg");
+        if (r != b.length) throw new IOException("USB short write reg " + r + "/" + b.length);
     }
 
     private int readReg(int block, int reg, int len) throws IOException {
         int requestLen = Math.max(8, len);
         byte[] b = new byte[requestLen];
-        int r = conn.controlTransfer(0xC0, 0, reg, block, b, requestLen, TIMEOUT);
-        if (r < len) throw new IOException("USB read reg failed");
+        int r = ctrlIn(reg, block, b, requestLen, "USB read reg");
+        if (r < len) throw new IOException("USB short read reg " + r + "/" + len);
         int v = 0;
         for (int i = 0; i < len; i++) v |= (b[i] & 0xff) << (8 * i);
         return v;
     }
 
     private void writeRegBuffer(int block, int reg, byte[] data) throws IOException {
-        int r = conn.controlTransfer(0x40, 0, reg, block | WRITE_FLAG, data, data.length, TIMEOUT);
-        if (r < 0) throw new IOException("USB write buffer failed");
+        int r = ctrlOut(reg, block | WRITE_FLAG, data, "USB write buffer");
+        if (r != data.length) throw new IOException("USB short write buffer " + r + "/" + data.length);
     }
 
     private byte[] readRegBuffer(int block, int reg, int len) throws IOException {
         byte[] b = new byte[Math.max(8, len)];
-        int r = conn.controlTransfer(0xC0, 0, reg, block, b, b.length, TIMEOUT);
-        if (r < len) throw new IOException("USB read buffer failed");
+        int r = ctrlIn(reg, block, b, b.length, "USB read buffer");
+        if (r < len) throw new IOException("USB short read buffer " + r + "/" + len);
         byte[] out = new byte[len];
         System.arraycopy(b, 0, out, 0, len);
         return out;
