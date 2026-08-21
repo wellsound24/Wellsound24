@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.usb.host" android:required="true" />
     <application
         android:allowBackup="false"
-        android:label="WELL RF Scanner Pro v7"
+        android:label="WELL RF Scanner Pro"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name="com.well.rfscanner.v7.MainActivity"
