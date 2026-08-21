@@ -10,8 +10,8 @@ android {
         applicationId 'com.well.rfscanner.standard1'
         minSdk 26
         targetSdk 35
-        versionCode 11
-        versionName '1.1-standard-ui-signal-id'
+        versionCode 12
+        versionName '1.2-stable-connect-restored'
     }
 
     buildTypes {
