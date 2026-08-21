@@ -10,7 +10,7 @@ import java.io.IOException;
 
 /**
  * Direct RTL2832U + R820T/R820T2 driver for Android USB Host.
- * Register flow follows the Apache-2.0 rtlsdrjs implementation.
+ * Control-transfer layout follows librtlsdr semantics.
  */
 public final class DirectRtlSdr {
     private static final int BLOCK_USB = 0x100;
@@ -46,15 +46,8 @@ public final class DirectRtlSdr {
     public void open() throws IOException {
         if (device.getInterfaceCount() < 1) throw new IOException("RTL-SDR interface missing");
         iface = device.getInterface(0);
-
-        // IMPORTANT: initialize the RTL2832U USB block before claiming interface 0.
-        // This mirrors the known-working librtlsdr/rtlsdrjs startup order and avoids
-        // Samsung/Android devices returning -1 on the first demodulator control write.
-        writeReg(BLOCK_USB, REG_SYSCTL, 0x09, 1);
-        writeReg(BLOCK_USB, REG_EPA_MAXPKT, 0x0200, 2);
-        writeReg(BLOCK_USB, REG_EPA_CTL, 0x0210, 2);
-
         if (!conn.claimInterface(iface, true)) throw new IOException("Claim USB interface failed");
+
         for (int i = 0; i < iface.getEndpointCount(); i++) {
             UsbEndpoint ep = iface.getEndpoint(i);
             if (ep.getType() == UsbConstants.USB_ENDPOINT_XFER_BULK && ep.getDirection() == UsbConstants.USB_DIR_IN) {
@@ -64,8 +57,12 @@ public final class DirectRtlSdr {
         }
         if (bulkIn == null) throw new IOException("RTL-SDR bulk IN endpoint missing");
 
+        writeReg(BLOCK_USB, REG_SYSCTL, 0x09, 1);
+        writeReg(BLOCK_USB, REG_EPA_MAXPKT, 0x0200, 2);
+        writeReg(BLOCK_USB, REG_EPA_CTL, 0x0210, 2);
         writeReg(BLOCK_SYS, REG_DEMOD_CTL_1, 0x22, 1);
         writeReg(BLOCK_SYS, REG_DEMOD_CTL, 0xe8, 1);
+
         demodWrite(1, 0x01, 0x14, 1);
         demodWrite(1, 0x01, 0x10, 1);
         demodWrite(1, 0x15, 0x00, 1);
@@ -154,7 +151,7 @@ public final class DirectRtlSdr {
             r = conn.controlTransfer(UsbConstants.USB_DIR_OUT | UsbConstants.USB_TYPE_VENDOR,
                     0, value, index, data, data.length, TIMEOUT);
             if (r >= 0) return r;
-            try { Thread.sleep(25L * (n + 1)); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            try { Thread.sleep(30L * (n + 1)); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
         throw new IOException(where + " failed v=0x" + Integer.toHexString(value) + " i=0x" + Integer.toHexString(index) + " rc=" + r);
     }
@@ -165,22 +162,28 @@ public final class DirectRtlSdr {
             r = conn.controlTransfer(UsbConstants.USB_DIR_IN | UsbConstants.USB_TYPE_VENDOR,
                     0, value, index, data, length, TIMEOUT);
             if (r >= 0) return r;
-            try { Thread.sleep(25L * (n + 1)); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            try { Thread.sleep(30L * (n + 1)); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
         throw new IOException(where + " failed v=0x" + Integer.toHexString(value) + " i=0x" + Integer.toHexString(index) + " rc=" + r);
     }
 
+    // librtlsdr rtlsdr_write_reg uses big-endian byte order for 16-bit writes.
     private void writeReg(int block, int reg, int value, int len) throws IOException {
-        byte[] b = numberToBytes(value, len, false);
+        byte[] b = new byte[len];
+        if (len == 1) {
+            b[0] = (byte)(value & 0xff);
+        } else {
+            b[0] = (byte)((value >> 8) & 0xff);
+            b[1] = (byte)(value & 0xff);
+        }
         int r = ctrlOut(reg, block | WRITE_FLAG, b, "USB write reg");
         if (r != b.length) throw new IOException("USB short write reg " + r + "/" + b.length);
     }
 
     private int readReg(int block, int reg, int len) throws IOException {
-        int requestLen = Math.max(8, len);
-        byte[] b = new byte[requestLen];
-        int r = ctrlIn(reg, block, b, requestLen, "USB read reg");
-        if (r < len) throw new IOException("USB short read reg " + r + "/" + len);
+        byte[] b = new byte[len];
+        int r = ctrlIn(reg, block, b, len, "USB read reg");
+        if (r != len) throw new IOException("USB short read reg " + r + "/" + len);
         int v = 0;
         for (int i = 0; i < len; i++) v |= (b[i] & 0xff) << (8 * i);
         return v;
@@ -192,20 +195,26 @@ public final class DirectRtlSdr {
     }
 
     private byte[] readRegBuffer(int block, int reg, int len) throws IOException {
-        byte[] b = new byte[Math.max(8, len)];
-        int r = ctrlIn(reg, block, b, b.length, "USB read buffer");
-        if (r < len) throw new IOException("USB short read buffer " + r + "/" + len);
-        byte[] out = new byte[len];
-        System.arraycopy(b, 0, out, 0, len);
-        return out;
+        byte[] b = new byte[len];
+        int r = ctrlIn(reg, block, b, len, "USB read buffer");
+        if (r != len) throw new IOException("USB short read buffer " + r + "/" + len);
+        return b;
     }
 
+    // Demodulator accesses have a different index layout than generic block accesses.
     private int demodRead(int page, int addr) throws IOException {
-        return readReg(page, (addr << 8) | 0x20, 1);
+        byte[] b = new byte[1];
+        int value = (addr << 8) | 0x20;
+        int r = ctrlIn(value, page, b, 1, "DEMOD read");
+        if (r != 1) throw new IOException("DEMOD short read " + r + "/1");
+        return b[0] & 0xff;
     }
 
     private void demodWrite(int page, int addr, int value, int len) throws IOException {
-        writeRegBuffer(page, (addr << 8) | 0x20, numberToBytes(value, len, true));
+        byte[] b = numberToBytes(value, len, true);
+        int reg = (addr << 8) | 0x20;
+        int r = ctrlOut(reg, 0x10 | page, b, "DEMOD write");
+        if (r != b.length) throw new IOException("DEMOD short write " + r + "/" + b.length);
         demodRead(0x0a, 0x01);
     }
 
