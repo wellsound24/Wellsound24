@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId 'com.well.rfscanner.v8'
+        applicationId 'com.well.rfscanner.v9'
         minSdk 26
         targetSdk 35
-        versionCode 8
-        versionName '0.8-real-usb'
+        versionCode 9
+        versionName '0.9-original-ui-safe-usb'
     }
 
     buildTypes {
