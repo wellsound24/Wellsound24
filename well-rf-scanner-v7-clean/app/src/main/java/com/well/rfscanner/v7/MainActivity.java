@@ -23,7 +23,7 @@ import android.widget.TextView;
 import java.util.HashMap;
 
 public class MainActivity extends Activity {
-    private static final String ACTION_USB_PERMISSION = "com.well.rfscanner.v7.USB_PERMISSION";
+    private static final String ACTION_USB_PERMISSION = "com.well.rfscanner.v9.USB_PERMISSION";
     private static final int REALTEK_VID = 0x0BDA;
     private static final int RTL2838_PID = 0x2838;
 
@@ -45,8 +45,22 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        buildOriginalUi();
-        initUsb();
+        try {
+            buildOriginalUi();
+        } catch (Throwable t) {
+            LinearLayout fallback = new LinearLayout(this);
+            fallback.setOrientation(LinearLayout.VERTICAL);
+            fallback.setGravity(Gravity.CENTER);
+            fallback.setBackgroundColor(Color.rgb(7,10,15));
+            TextView msg = new TextView(this);
+            msg.setText("WELL RF SCANNER PRO\nUI START ERROR: " + t.getClass().getSimpleName());
+            msg.setTextColor(Color.WHITE);
+            msg.setTextSize(18);
+            msg.setGravity(Gravity.CENTER);
+            fallback.addView(msg);
+            setContentView(fallback);
+        }
+        // USB is intentionally NOT initialized here. It starts only after CONNECT is tapped.
     }
 
     private void buildOriginalUi() {
@@ -105,12 +119,12 @@ public class MainActivity extends Activity {
         spacer(root, 12);
 
         LinearLayout metrics1 = row();
-        metrics1.addView(metric("SAMPLE RATE", "2.048 MS/s", panel, muted), weightCard());
-        metrics1.addView(metric("GAIN", "AUTO", panel, muted), weightCard());
+        metrics1.addView(metric("SAMPLE RATE", "2.048 MS/s", panel), weightCard());
+        metrics1.addView(metric("GAIN", "AUTO", panel), weightCard());
         root.addView(metrics1);
         LinearLayout metrics2 = row();
-        metrics2.addView(metric("PPM", "0.5", panel, muted), weightCard());
-        rfEngine = metric("RF ENGINE", "IDLE", panel, muted);
+        metrics2.addView(metric("PPM", "0.5", panel), weightCard());
+        rfEngine = metric("RF ENGINE", "IDLE", panel);
         metrics2.addView(rfEngine, weightCard());
         root.addView(metrics2);
         spacer(root, 16);
@@ -178,12 +192,8 @@ public class MainActivity extends Activity {
     private void initUsb() {
         try {
             usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+            if (usbManager == null) { setUsbState("USB HOST UNAVAILABLE", false); return; }
             registerReceiverOnce();
-            UsbDevice d = findRtl();
-            if (d != null) {
-                showDevice(d);
-                setUsbState("RTL-SDR DETECTED", true);
-            }
         } catch (Throwable t) {
             setUsbState("USB ERROR: " + t.getClass().getSimpleName(), false);
         }
@@ -192,10 +202,8 @@ public class MainActivity extends Activity {
     private void connectUsb() {
         initUsb();
         UsbDevice d = findRtl();
-        if (d == null) {
-            setUsbState("RTL-SDR NOT FOUND", false);
-            return;
-        }
+        if (d == null) { setUsbState("RTL-SDR NOT FOUND", false); return; }
+        showDevice(d);
         requestOrOpen(d);
     }
 
@@ -289,7 +297,7 @@ public class MainActivity extends Activity {
         return t;
     }
 
-    private TextView metric(String label, String value, int panel, int muted) {
+    private TextView metric(String label, String value, int panel) {
         TextView t = text(label + "\n" + value, 14, Color.WHITE, false);
         t.setGravity(Gravity.CENTER);
         t.setPadding(dp(8), dp(11), dp(8), dp(11));
