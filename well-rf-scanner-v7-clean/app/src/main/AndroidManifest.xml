@@ -3,7 +3,7 @@
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
     <application
         android:allowBackup="false"
-        android:label="WELL RF Scanner Pro"
+        android:label="WELL RF Scanner Pro v9"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name="com.well.rfscanner.v7.MainActivity"
