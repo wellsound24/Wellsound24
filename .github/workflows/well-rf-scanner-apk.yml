@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  build-v7-clean:
+  build-v8-real-usb:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,29 +29,24 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Build v7 clean APK
+      - name: Build v8 real USB APK
         working-directory: well-rf-scanner-v7-clean
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Verify clean contents
+      - name: Verify APK archive
         run: |
           APK=well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk
           unzip -t "$APK"
-          if unzip -l "$APK" | grep -q 'device_filter.xml'; then
-            echo 'Unexpected old USB resource found'
-            exit 1
-          fi
+          unzip -l "$APK" | grep -q 'classes.dex'
 
-      - name: Save v7 APK and ZIP
+      - name: Save v8 APK
         run: |
-          mkdir -p build-artifacts/v7
-          cp well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk build-artifacts/v7/WELL_RF_Scanner_Pro_v7_Clean.apk
-          cd build-artifacts/v7
-          zip WELL_RF_Scanner_Pro_v7_Clean_APK.zip WELL_RF_Scanner_Pro_v7_Clean.apk
+          mkdir -p build-artifacts/v8
+          cp well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk build-artifacts/v8/WELL_RF_Scanner_Pro_v8_Real_USB.apk
 
-      - name: Upload v7 clean artifact
+      - name: Upload v8 APK
         uses: actions/upload-artifact@v4
         with:
-          name: WELL_RF_Scanner_Pro_v7_Clean
-          path: build-artifacts/v7/*
+          name: WELL_RF_Scanner_Pro_v8_Real_USB
+          path: build-artifacts/v8/WELL_RF_Scanner_Pro_v8_Real_USB.apk
           if-no-files-found: error
