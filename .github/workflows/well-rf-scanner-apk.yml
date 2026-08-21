@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  build-v9-original-ui-safe:
+  build-v7-stable-ui-usb:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,21 +29,21 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Build v9 APK
+      - name: Build v7 stable APK
         working-directory: well-rf-scanner-v7-clean
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Verify APK archive
         run: unzip -t well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Save v9 APK
+      - name: Save stable APK
         run: |
-          mkdir -p build-artifacts/v9
-          cp well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk build-artifacts/v9/WELL_RF_Scanner_Pro_v9_Original_UI_Safe_USB.apk
+          mkdir -p build-artifacts/v7-stable
+          cp well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk build-artifacts/v7-stable/WELL_RF_Scanner_Pro_v7_Stable_UI_USB.apk
 
-      - name: Upload v9 APK
+      - name: Upload stable APK
         uses: actions/upload-artifact@v4
         with:
-          name: WELL_RF_Scanner_Pro_v9_Original_UI_Safe_USB
-          path: build-artifacts/v9/WELL_RF_Scanner_Pro_v9_Original_UI_Safe_USB.apk
+          name: WELL_RF_Scanner_Pro_v7_Stable_UI_USB
+          path: build-artifacts/v7-stable/WELL_RF_Scanner_Pro_v7_Stable_UI_USB.apk
           if-no-files-found: error
