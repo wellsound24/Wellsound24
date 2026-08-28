@@ -193,7 +193,7 @@
 
   try{
     let html=await (await fetch(ORIGIN+'/?std4='+Date.now(),{cache:'no-store'})).text();
-    const rememberBoot='<script>(function(){try{if(localStorage.getItem(\"well_admin_remember\")==\"1\"){const t=localStorage.getItem(\"well_admin_remember_token\");if(t&&!sessionStorage.getItem(\"well_admin_session\"))sessionStorage.setItem(\"well_admin_session\",t)}}catch(e){}})();<\\/script>';
+    const rememberBoot='<script>(function(){try{if(localStorage.getItem(\"well_admin_remember\")==\"1\"){const t=localStorage.getItem(\"well_admin_remember_token\");if(t&&!sessionStorage.getItem(\"well_admin_session\"))sessionStorage.setItem(\"well_admin_session\",t)}}catch(e){}})();<\/script>';
     html=html.replace(/<script src=\"\/license-next-1\.js[^\"]*\"><\/script>/,rememberBoot+'$&');
     html=html.replace(/href="\/(license-next[^\"]+)"/g,'href="'+ORIGIN+'/$1"');
     html=html.replace(/src="\/(license-next[^\"]+)"/g,'src="'+ORIGIN+'/$1"');
