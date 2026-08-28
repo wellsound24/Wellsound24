@@ -7,6 +7,22 @@
     {
       "source": "/admin/",
       "destination": "/admin.html"
+    },
+    {
+      "source": "/license",
+      "destination": "/license.html"
+    },
+    {
+      "source": "/license/",
+      "destination": "/license.html"
+    },
+    {
+      "source": "/well",
+      "destination": "/license.html"
+    },
+    {
+      "source": "/well/",
+      "destination": "/license.html"
     }
   ]
 }
