@@ -3,45 +3,131 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Well Semi EA License Dashboard</title>
-<style>
-:root{--bg:#0b0f14;--panel:#111827;--card:#151d2a;--line:#263244;--text:#f8fafc;--muted:#94a3b8;--accent:#22c55e;--warn:#f59e0b;--bad:#ef4444}
-*{box-sizing:border-box}body{margin:0;background:#0b0f14;color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Tahoma,sans-serif}button,input,select,textarea{font:inherit}.hidden{display:none!important}.login-shell{min-height:100vh;display:grid;place-items:center;padding:20px}.login{width:min(430px,100%);background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px}.login h1{margin:0 0 8px}.muted{color:var(--muted)}.input{width:100%;background:#0e1521;color:var(--text);border:1px solid var(--line);padding:11px 12px;border-radius:10px;min-height:44px}.btn{border:1px solid var(--line);background:#172033;color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer}.btn.primary{background:var(--accent);color:#041008;border-color:transparent;font-weight:800}.btn.danger{background:#331519;color:#fecaca}.btn.small{padding:7px 10px;font-size:12px}.wrap{max-width:1280px;margin:0 auto;padding:24px}.top,.toolbar,.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.top,.toolbar{justify-content:space-between}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}.stat b{display:block;font-size:28px;margin-top:6px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1000px}th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}th{background:#0f1621;color:var(--muted)}.badge{display:inline-block;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800}.ok{background:#0d2b1a;color:#86efac}.pending{background:#33240b;color:#fcd34d}.bad{background:#321318;color:#fca5a5}.modal{position:fixed;inset:0;background:#000a;display:none;place-items:center;padding:18px}.modal.open{display:grid}.modal-card{width:min(720px,100%);background:#101722;border:1px solid var(--line);border-radius:16px;padding:18px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field label{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}.span2{grid-column:1/-1}.msg{font-size:12px;color:var(--muted);min-height:18px;margin-top:8px}@media(max-width:800px){.wrap{padding:14px}.grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.span2{grid-column:auto}.top{align-items:flex-start;flex-direction:column}}
-</style>
+<meta name="color-scheme" content="dark">
+<title>Well License Dashboard</title>
+<link rel="stylesheet" href="/license-pro.css?v=1">
 </head>
 <body>
 <section id="loginView" class="login-shell">
-<form id="loginForm" class="login">
-<h1>Well Semi EA License</h1>
-<p class="muted">Admin Dashboard สำหรับควบคุม License EA</p>
-<label class="muted" for="adminKey">Admin Key</label>
-<input id="adminKey" class="input" type="password" required placeholder="กรอกรหัส Admin">
-<button class="btn primary" type="submit" style="width:100%;margin-top:12px">เข้าสู่ระบบ</button>
-<div id="loginMsg" class="msg"></div>
-</form>
+  <form id="loginForm" class="login-card">
+    <div class="login-brand"><div class="brand-mark">W</div><div><h1>Well License Dashboard</h1><p class="muted">Professional Admin Control</p></div></div>
+    <div class="login-fields">
+      <div><label for="loginUsername">Username</label><input id="loginUsername" class="input" autocomplete="username" value="admin" required></div>
+      <div><label for="loginPassword">Password</label><input id="loginPassword" class="input" type="password" autocomplete="current-password" required></div>
+      <button id="loginBtn" class="btn primary" type="submit">เข้าสู่ระบบ</button>
+    </div>
+    <div id="loginMsg" class="msg"></div>
+    <div class="login-footer">ระบบจัดการ License สำหรับผู้ดูแล • Session มีอายุ 12 ชั่วโมง</div>
+  </form>
 </section>
-<main id="appView" class="wrap hidden">
-<div class="top"><div><h1 style="margin:0">Well Semi EA License Dashboard</h1><div class="muted">MT5 Login • Broker • Server • IB • Expiry</div></div><div class="actions"><span id="apiStatus" class="muted">API</span><button id="logoutBtn" class="btn">ออกจากระบบ</button></div></div>
-<section class="grid"><div class="card stat"><span class="muted">ทั้งหมด</span><b id="sTotal">0</b></div><div class="card stat"><span class="muted">Active</span><b id="sActive">0</b></div><div class="card stat"><span class="muted">IB Approved</span><b id="sIb">0</b></div><div class="card stat"><span class="muted">Blocked/Expired</span><b id="sBlocked">0</b></div></section>
-<div class="toolbar"><div class="actions"><button id="addBtn" class="btn primary">+ เพิ่ม License</button><button id="refreshBtn" class="btn">รีเฟรช</button></div><div class="actions"><input id="search" class="input" style="width:260px" placeholder="ค้นหาชื่อ / Login / Broker"><select id="filter" class="input" style="width:auto"><option value="all">ทุกสถานะ</option><option value="active">Active</option><option value="blocked">Blocked</option><option value="expired">Expired</option></select></div></div>
-<div class="table-wrap"><table><thead><tr><th>ลูกค้า</th><th>MT5 Login</th><th>Broker / Server</th><th>IB</th><th>หมดอายุ</th><th>License Key</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="rows"></tbody></table></div>
-</main>
-<div id="licenseModal" class="modal"><form id="licenseForm" class="modal-card"><h2>เพิ่ม License ใหม่</h2><div class="form-grid"><div class="field"><label>ชื่อลูกค้า</label><input id="fName" class="input" required></div><div class="field"><label>MT5 Login</label><input id="fLogin" class="input" required inputmode="numeric"></div><div class="field"><label>Broker</label><input id="fBroker" class="input" required></div><div class="field"><label>Server</label><input id="fServer" class="input" required></div><div class="field"><label>สถานะ IB</label><select id="fIb" class="input"><option value="approved">Approved</option><option value="pending" selected>Pending</option><option value="rejected">Rejected</option></select></div><div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required></div><div class="field span2"><label>หมายเหตุ</label><textarea id="fNotes" class="input" rows="2"></textarea></div><div class="span2 actions" style="justify-content:flex-end"><button id="cancelBtn" type="button" class="btn">ยกเลิก</button><button type="submit" class="btn primary">สร้าง License</button></div><div id="formMsg" class="msg span2"></div></div></form></div>
-<script>
-const API='https://sjcxywxixgrpdgeqaepk.supabase.co/functions/v1/admin-license';
-let adminKey=sessionStorage.getItem('well_admin_key')||'',licenses=[];
-const $=s=>document.querySelector(s);const today=()=>new Date().toISOString().slice(0,10);const plusDays=n=>{const d=new Date();d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function api(action,payload={}){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':adminKey},body:JSON.stringify({action,...payload})});const j=await r.json().catch(()=>({ok:false,error:'bad_response'}));if(r.status===401)throw new Error('unauthorized');if(!r.ok||!j.ok)throw new Error(j.error||'api_error');return j}
-function statusOf(x){if(x.expires_at<today())return'expired';if(x.enabled&&x.ib_status==='approved')return'active';return'blocked'}
-function badge(t,c){return `<span class="badge ${c}">${esc(t)}</span>`}
-function render(){const q=$('#search').value.trim().toLowerCase(),f=$('#filter').value;const list=licenses.filter(x=>{const h=`${x.customer_name} ${x.mt5_login} ${x.broker} ${x.server}`.toLowerCase();return(!q||h.includes(q))&&(f==='all'||statusOf(x)===f)});$('#rows').innerHTML=list.map(x=>`<tr><td><b>${esc(x.customer_name)}</b></td><td>${esc(x.mt5_login)}</td><td>${esc(x.broker)}<div class="muted">${esc(x.server)}</div></td><td>${x.ib_status==='approved'?badge('Approved','ok'):x.ib_status==='pending'?badge('Pending','pending'):badge('Rejected','bad')}</td><td>${esc(x.expires_at)}</td><td style="max-width:170px;overflow:hidden;text-overflow:ellipsis">${esc(x.license_key)}</td><td>${statusOf(x)==='active'?badge('Active','ok'):statusOf(x)==='expired'?badge('Expired','bad'):badge('Blocked','pending')}</td><td><div class="actions"><button class="btn small" data-a="toggle" data-id="${x.id}">${x.enabled?'ปิด':'เปิด'}</button><button class="btn small" data-a="ib" data-id="${x.id}">IB</button><button class="btn small" data-a="extend" data-id="${x.id}">+30 วัน</button><button class="btn small danger" data-a="delete" data-id="${x.id}">ลบ</button></div></td></tr>`).join('');$('#sTotal').textContent=licenses.length;$('#sActive').textContent=licenses.filter(x=>statusOf(x)==='active').length;$('#sIb').textContent=licenses.filter(x=>x.ib_status==='approved').length;$('#sBlocked').textContent=licenses.filter(x=>statusOf(x)!=='active').length}
-async function load(){try{$('#apiStatus').textContent='กำลังเชื่อมต่อ...';const j=await api('list');licenses=j.licenses||[];render();$('#apiStatus').textContent='API Online'}catch(e){$('#apiStatus').textContent='API Error'}}
-function showApp(){$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden');load()}function logout(){sessionStorage.removeItem('well_admin_key');adminKey='';$('#appView').classList.add('hidden');$('#loginView').classList.remove('hidden')}
-$('#loginForm').addEventListener('submit',async e=>{e.preventDefault();adminKey=$('#adminKey').value.trim();$('#loginMsg').textContent='กำลังตรวจสอบ...';try{await api('ping');sessionStorage.setItem('well_admin_key',adminKey);$('#loginMsg').textContent='';showApp()}catch{$('#loginMsg').textContent='รหัส Admin ไม่ถูกต้อง'}});
-$('#logoutBtn').addEventListener('click',logout);$('#refreshBtn').addEventListener('click',load);$('#search').addEventListener('input',render);$('#filter').addEventListener('change',render);$('#addBtn').addEventListener('click',()=>{$('#fExpiry').value=plusDays(365);$('#licenseModal').classList.add('open')});$('#cancelBtn').addEventListener('click',()=>$('#licenseModal').classList.remove('open'));
-$('#licenseForm').addEventListener('submit',async e=>{e.preventDefault();$('#formMsg').textContent='กำลังสร้าง...';try{await api('create',{customer_name:$('#fName').value.trim(),mt5_login:$('#fLogin').value.trim(),broker:$('#fBroker').value.trim(),server:$('#fServer').value.trim(),ib_status:$('#fIb').value,expires_at:$('#fExpiry').value,notes:$('#fNotes').value.trim(),product_code:'SEMI_EA'});e.target.reset();$('#licenseModal').classList.remove('open');await load()}catch(err){$('#formMsg').textContent='สร้างไม่สำเร็จ: '+err.message}});
-$('#rows').addEventListener('click',async e=>{const b=e.target.closest('button[data-a]');if(!b)return;const x=licenses.find(v=>v.id===b.dataset.id);if(!x)return;try{if(b.dataset.a==='toggle')await api('toggle',{id:x.id,enabled:!x.enabled});if(b.dataset.a==='extend')await api('extend',{id:x.id,days:30});if(b.dataset.a==='ib'){const next=x.ib_status==='approved'?'pending':x.ib_status==='pending'?'rejected':'approved';await api('set_ib',{id:x.id,ib_status:next})}if(b.dataset.a==='delete'){if(!confirm('ยืนยันลบ License นี้?'))return;await api('delete',{id:x.id})}await load()}catch(err){alert('ทำรายการไม่สำเร็จ: '+err.message)}});
-if(adminKey){api('ping').then(showApp).catch(logout)}
-</script>
+
+<div id="appView" class="app-shell hidden">
+  <aside class="sidebar">
+    <div class="side-brand"><div class="brand-mark">W</div><div><div id="sideTitle" class="side-title">Well License Dashboard</div><div id="sideCompany" class="side-sub">Well</div></div></div>
+    <nav class="nav">
+      <button class="nav-btn active" data-view="overview"><span class="nav-icon">◫</span>ภาพรวม</button>
+      <button class="nav-btn" data-view="licenses"><span class="nav-icon">▤</span>จัดการ License</button>
+      <button class="nav-btn" data-view="activity"><span class="nav-icon">◷</span>ประวัติการทำงาน</button>
+      <button class="nav-btn" data-view="settings"><span class="nav-icon">⚙</span>ตั้งค่า Admin</button>
+    </nav>
+    <div class="side-bottom">
+      <div class="admin-mini"><div class="avatar" id="adminAvatar">A</div><div style="min-width:0"><div id="adminMiniName" class="admin-mini-name">Admin</div><div id="adminMiniUser" class="admin-mini-user">@admin</div></div></div>
+      <button id="logoutBtn" class="btn soft" style="width:100%">ออกจากระบบ</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><div id="pageTitle" class="page-title">ภาพรวม</div><div id="pageSubtitle" class="page-subtitle">สถานะระบบ License ทั้งหมด</div></div>
+      <div class="top-actions"><span id="apiStatus" class="api-pill">API Online</span><button id="mobileLogoutBtn" class="btn small">ออกจากระบบ</button></div>
+    </header>
+
+    <div class="content">
+      <section id="view-overview" class="view active">
+        <div class="stats-grid">
+          <div class="stat"><div class="stat-label">License ทั้งหมด</div><div id="sTotal" class="stat-value">0</div><div class="stat-note">รายการที่ยังไม่ Archive</div></div>
+          <div class="stat"><div class="stat-label">Active</div><div id="sActive" class="stat-value">0</div><div class="stat-note">พร้อมให้ EA ใช้งาน</div></div>
+          <div class="stat"><div class="stat-label">ใกล้หมดอายุ</div><div id="sExpiring" class="stat-value">0</div><div class="stat-note">เหลือไม่เกิน 7 วัน</div></div>
+          <div class="stat"><div class="stat-label">IB Pending</div><div id="sPending" class="stat-value">0</div><div class="stat-note">รออนุมัติ IB</div></div>
+          <div class="stat"><div class="stat-label">Disabled / Expired</div><div id="sBlocked" class="stat-value">0</div><div class="stat-note">ต้องตรวจสอบ</div></div>
+        </div>
+        <div class="section-grid">
+          <div class="panel"><div class="panel-head"><div><div class="panel-title">รายการที่ต้องจัดการ</div><div class="panel-sub">License ใกล้หมดอายุ, Pending หรือถูกปิด</div></div><button class="btn small" data-go="licenses">ดูทั้งหมด</button></div><div id="attentionList" class="attention-list"></div></div>
+          <div class="panel"><div class="panel-head"><div><div class="panel-title">งานด่วน</div><div class="panel-sub">ทางลัดสำหรับงานที่ใช้บ่อย</div></div></div><div class="quick-grid"><button class="quick-card" data-quick="add"><b>+ เพิ่ม License</b><span>สร้างสิทธิ์ให้ลูกค้าใหม่</span></button><button class="quick-card" data-quick="pending"><b>ตรวจ IB Pending</b><span>ดูรายการที่ยังไม่ Approved</span></button><button class="quick-card" data-quick="expiring"><b>ใกล้หมดอายุ</b><span>ต่ออายุได้รวดเร็ว</span></button><button class="quick-card" data-quick="activity"><b>ดู Activity</b><span>ตรวจประวัติการแก้ไข</span></button></div></div>
+        </div>
+      </section>
+
+      <section id="view-licenses" class="view">
+        <div class="toolbar">
+          <div class="toolbar-left"><button id="addLicenseBtn" class="btn primary">+ เพิ่ม License</button><button id="refreshBtn" class="btn soft">รีเฟรช</button></div>
+          <div class="toolbar-right"><input id="search" class="input search" placeholder="ค้นหาชื่อ / MT5 / Broker / Server / Key"><select id="statusFilter" class="select filter-select"><option value="all">ทุกสถานะ</option><option value="active">Active</option><option value="pending">IB Pending</option><option value="disabled">Disabled</option><option value="expired">Expired</option><option value="expiring">ใกล้หมดอายุ 7 วัน</option><option value="archived">Archived</option></select><label class="check-wrap"><input id="showArchived" type="checkbox"> แสดง Archived</label></div>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>ลูกค้า</th><th>MT5 Login</th><th>Broker / Server</th><th>IB</th><th>วันหมดอายุ</th><th>เหลือ</th><th>License Key</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="licenseRows"></tbody></table><div id="licenseEmpty" class="empty hidden">ไม่พบ License ตามเงื่อนไข</div></div>
+      </section>
+
+      <section id="view-activity" class="view">
+        <div class="panel">
+          <div class="panel-head"><div><div class="panel-title">ประวัติการทำงาน</div><div class="panel-sub">ตรวจสอบการแก้ไขของ Admin และการตรวจ License จาก EA</div></div><button id="activityRefresh" class="btn small">รีเฟรช</button></div>
+          <div class="activity-tabs"><button class="tab-btn active" data-activity="admin">Admin Audit</button><button class="tab-btn" data-activity="verify">EA Verification</button></div>
+          <div id="activityList" class="activity-list"></div>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view">
+        <div class="settings-grid">
+          <form id="adminForm" class="panel">
+            <div class="panel-head"><div><div class="panel-title">ข้อมูล Admin และระบบ</div><div class="panel-sub">แก้ชื่อผู้ดูแล, Username, Email และชื่อ Dashboard</div></div></div>
+            <div class="settings-form">
+              <div class="field"><label>ชื่อผู้ดูแล</label><input id="aDisplayName" class="input" required maxlength="80"></div>
+              <div class="field"><label>Username</label><input id="aUsername" class="input" required maxlength="32"><div class="field-help">ตัวอักษรอังกฤษ ตัวเลข . _ - เท่านั้น</div></div>
+              <div class="field"><label>Email</label><input id="aEmail" class="input" type="email" maxlength="160" placeholder="ไม่บังคับ"></div>
+              <div class="field"><label>ชื่อบริษัท / แบรนด์</label><input id="aCompany" class="input" required maxlength="100"></div>
+              <div class="field span2"><label>ชื่อ Dashboard</label><input id="aDashboardTitle" class="input" required maxlength="100"></div>
+            </div>
+            <div class="divider"></div>
+            <div class="panel-title">เปลี่ยน Password</div><div class="panel-sub" style="margin-bottom:12px">เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยน</div>
+            <div class="settings-form">
+              <div class="field"><label>Password ปัจจุบัน</label><input id="aCurrentPassword" class="input" type="password" autocomplete="current-password"></div>
+              <div class="field"></div>
+              <div class="field"><label>Password ใหม่</label><input id="aNewPassword" class="input" type="password" autocomplete="new-password"></div>
+              <div class="field"><label>ยืนยัน Password ใหม่</label><input id="aConfirmPassword" class="input" type="password" autocomplete="new-password"></div>
+            </div>
+            <div id="adminMsg" class="msg"></div>
+            <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn primary" type="submit">บันทึกการตั้งค่า</button></div>
+          </form>
+          <div class="panel">
+            <div class="panel-title">ความปลอดภัย</div><div class="panel-sub">สถานะบัญชีผู้ดูแล</div>
+            <div class="security-card" style="margin-top:13px"><h3>Admin Session</h3><div class="security-list"><div>✓ รหัสผ่านเก็บแบบ PBKDF2 Hash</div><div>✓ Session หมดอายุอัตโนมัติภายใน 12 ชั่วโมง</div><div>✓ เปลี่ยน Password แล้ว Session เก่าถูกยกเลิก</div><div>✓ ทุกการแก้ License ถูกบันทึก Audit Log</div></div></div>
+            <div class="security-card" style="margin-top:11px"><h3>ข้อมูลบัญชี</h3><div class="security-list"><div>Last login: <span id="aLastLogin">-</span></div><div>API: <span style="color:#86efac">Connected</span></div><div>Backend: Supabase</div><div>Frontend: Vercel</div></div></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div id="licenseModal" class="modal" aria-hidden="true">
+  <form id="licenseForm" class="modal-card">
+    <div class="modal-head"><div><div id="licenseModalTitle" class="modal-title">เพิ่ม License</div><div id="licenseModalSub" class="panel-sub">กรอกข้อมูลบัญชี MT5 ที่ต้องการอนุญาต</div></div><button id="closeLicenseModal" class="btn icon-btn" type="button">×</button></div>
+    <div class="modal-body">
+      <div id="editMeta" class="license-meta hidden"><div class="meta-box"><div class="meta-label">License Key</div><div class="meta-value mono" id="mLicenseKey">-</div><div style="margin-top:8px"><button id="copyModalKey" class="btn small" type="button">คัดลอก Key</button></div></div><div class="meta-box"><div class="meta-label">สถานะการใช้งาน</div><div class="switch-row" style="margin-top:6px"><div><b id="mEnabledLabel">Enabled</b><div class="field-help">ปิดแล้ว EA จะไม่เปิดออเดอร์ใหม่</div></div><label class="switch"><input id="mEnabled" type="checkbox"><span class="slider"></span></label></div></div></div>
+      <div class="form-grid">
+        <div class="field"><label>ชื่อลูกค้า</label><input id="fName" class="input" required maxlength="100"></div>
+        <div class="field"><label>MT5 Login</label><input id="fLogin" class="input" inputmode="numeric" required maxlength="20"></div>
+        <div class="field"><label>Broker</label><input id="fBroker" class="input" required maxlength="120"></div>
+        <div class="field"><label>Server</label><input id="fServer" class="input" required maxlength="120"></div>
+        <div class="field"><label>สถานะ IB</label><select id="fIb" class="select"><option value="approved">Approved</option><option value="pending">Pending</option><option value="rejected">Rejected</option></select></div>
+        <div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required><div id="renewTools" class="renew-row hidden"><button class="btn small" type="button" data-renew="7">+7 วัน</button><button class="btn small" type="button" data-renew="30">+30 วัน</button><button class="btn small" type="button" data-renew="90">+90 วัน</button><button class="btn small" type="button" data-renew="365">+1 ปี</button></div></div>
+        <div class="field span2"><label>หมายเหตุ</label><textarea id="fNotes" class="textarea" maxlength="1000" placeholder="เช่น สมัครผ่าน IB / VIP / ข้อมูลที่ต้องจำ"></textarea></div>
+      </div>
+      <div id="licenseMsg" class="msg"></div>
+    </div>
+    <div class="modal-foot"><div><button id="archiveBtn" class="btn danger hidden" type="button">Archive License</button><button id="restoreBtn" class="btn hidden" type="button">Restore</button></div><div style="display:flex;gap:8px"><button id="cancelLicenseBtn" class="btn" type="button">ยกเลิก</button><button id="saveLicenseBtn" class="btn primary" type="submit">สร้าง License</button></div></div>
+  </form>
+</div>
+
+<div id="toastWrap" class="toast-wrap" aria-live="polite"></div>
+
+<script src="/license-pro.js?v=1"></script>
 </body>
 </html>
