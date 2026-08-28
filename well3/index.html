@@ -11,10 +11,12 @@
     const add=(iso,n)=>{const d=new Date((iso||day())+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
     const leftDays=iso=>Math.max(0,Math.round((new Date(iso+'T00:00:00Z')-new Date(day()+'T00:00:00Z'))/86400000));
     const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
     function remove30(){document.querySelectorAll('[data-renew-license]').forEach(x=>x.remove())}
     function syncDays(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||!e||!l)return;if(l.checked||!e.value){d.value='';return}d.value=String(leftDays(e.value))}
     function syncExpiry(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||!e||!l||l.checked||d.value==='')return;const n=Math.max(0,Math.min(3650,Math.floor(Number(d.value)||0)));d.value=String(n);e.value=add(day(),n)}
     function wireDays(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||d.dataset.wired)return;d.dataset.wired='1';d.addEventListener('input',syncExpiry);e.addEventListener('change',syncDays);l.addEventListener('change',()=>{d.disabled=l.checked;if(l.checked)d.value='';else syncDays()});syncDays()}
+
     async function webApi(action,payload={}){
       const token=sessionStorage.getItem('well_admin_session')||'';
       if(!token)throw new Error('unauthorized');
@@ -23,61 +25,90 @@
       if(!r.ok||!j.ok)throw new Error(j.error||'server_error');
       return j;
     }
-    function ensureWebPanel(){
+
+    function ensureLicenseWebPanel(){
       const toolbar=q('#view-licenses .toolbar');
-      if(!toolbar||q('#webrequestPanel'))return;
+      if(!toolbar||q('#webrequestDisplayPanel'))return;
       const left=toolbar.querySelector('.toolbar-left');
       if(!left)return;
-      left.insertAdjacentHTML('afterend',`<div id="webrequestPanel" class="webrequest-inline">
+      left.insertAdjacentHTML('afterend',`<div id="webrequestDisplayPanel" class="webrequest-inline">
         <div class="webrequest-label">WebRequest URL</div>
-        <div class="webrequest-controls">
-          <input id="webrequestUrlInput" class="input" placeholder="ใส่ URL สำหรับส่งให้ลูกค้า เช่น https://...">
-          <button id="webrequestSaveBtn" class="btn primary small" type="button">บันทึก</button>
+        <div class="webrequest-display-controls">
+          <input id="webrequestDisplayInput" class="input" readonly placeholder="ยังไม่ได้บันทึก URL">
           <button id="webrequestCopyBtn" class="btn soft small" type="button" disabled>คัดลอก</button>
-          <button id="webrequestHistoryBtn" class="btn small" type="button">ประวัติ</button>
         </div>
-        <div id="webrequestMsg" class="webrequest-msg"></div>
+        <div id="licenseWebrequestMsg" class="webrequest-msg"></div>
       </div>`);
-      toolbar.insertAdjacentHTML('afterend',`<div id="webrequestHistoryPanel" class="panel webrequest-history hidden">
-        <div class="panel-head"><div><div class="panel-title">บันทึก WebRequest URL ย้อนหลัง</div><div class="panel-sub">นำ URL เก่ากลับมาใช้ได้ หรือลบรายการที่ไม่ต้องการ</div></div><button id="webrequestHistoryClose" class="btn small" type="button">ปิด</button></div>
+      q('#webrequestCopyBtn').addEventListener('click',copyWebUrl);
+    }
+
+    function ensureSettingsWebPanel(){
+      const grid=q('#view-settings .settings-grid');
+      if(!grid||q('#webrequestSettingsPanel'))return;
+      grid.insertAdjacentHTML('beforeend',`<div id="webrequestSettingsPanel" class="panel webrequest-settings-panel">
+        <div class="panel-head"><div><div class="panel-title">ตั้งค่า WebRequest URL สำหรับลูกค้า</div><div class="panel-sub">แก้ไขและบันทึก URL ได้เฉพาะในหน้านี้ เพื่อลดการกดเปลี่ยนโดยไม่ตั้งใจ</div></div></div>
+        <div class="webrequest-settings-controls">
+          <input id="webrequestSettingsInput" class="input" placeholder="ใส่ URL เช่น https://...">
+          <button id="webrequestSaveBtn" class="btn primary" type="button">บันทึก URL</button>
+        </div>
+        <div id="webrequestMsg" class="msg"></div>
+        <div class="divider"></div>
+        <div class="panel-head"><div><div class="panel-title">บันทึกย้อนหลัง</div><div class="panel-sub">นำ URL เก่ากลับมาใช้ได้ หรือลบรายการที่ไม่ต้องการ</div></div></div>
         <div id="webrequestHistory" class="stack"><div class="empty">ยังไม่มีประวัติ</div></div>
       </div>`);
       q('#webrequestSaveBtn').addEventListener('click',saveWebUrl);
-      q('#webrequestCopyBtn').addEventListener('click',copyWebUrl);
-      q('#webrequestHistoryBtn').addEventListener('click',()=>{q('#webrequestHistoryPanel').classList.toggle('hidden');if(!q('#webrequestHistoryPanel').classList.contains('hidden'))loadWebUrls()});
-      q('#webrequestHistoryClose').addEventListener('click',()=>q('#webrequestHistoryPanel').classList.add('hidden'));
       q('#webrequestHistory').addEventListener('click',handleHistoryClick);
     }
+
+    function ensureWebPanels(){
+      ensureLicenseWebPanel();
+      ensureSettingsWebPanel();
+    }
+
     function renderWebUrls(j){
-      const input=q('#webrequestUrlInput'),list=q('#webrequestHistory'),copy=q('#webrequestCopyBtn');
-      if(!input||!list)return;
+      const display=q('#webrequestDisplayInput'),edit=q('#webrequestSettingsInput'),list=q('#webrequestHistory'),copy=q('#webrequestCopyBtn');
       const current=j.current||null, rows=Array.isArray(j.history)?j.history:[];
-      input.value=current?.url||'';
-      copy.disabled=!input.value;
-      list.innerHTML=rows.length?rows.map(r=>`<div class="url-history-row ${r.is_current?'current':''}">
+      const url=current?.url||'';
+      if(display)display.value=url;
+      if(edit)edit.value=url;
+      if(copy)copy.disabled=!url;
+      if(list)list.innerHTML=rows.length?rows.map(r=>`<div class="url-history-row ${r.is_current?'current':''}">
         <div class="url-history-main"><code>${esc(r.url)}</code><div class="subline">${new Date(r.created_at).toLocaleString('th-TH')}</div></div>
         <div class="row-actions">${r.is_current?'<span class="badge good"><span class="status-dot"></span>ใช้งานอยู่</span>':`<button class="btn small" type="button" data-restore-url="${r.id}">นำกลับมาใช้</button><button class="btn small danger" type="button" data-delete-url="${r.id}">ลบ</button>`}</div>
       </div>`).join(''):'<div class="empty">ยังไม่มีประวัติ</div>';
     }
+
     async function loadWebUrls(){
-      ensureWebPanel();
+      ensureWebPanels();
       const token=sessionStorage.getItem('well_admin_session')||'';
       if(!token)return;
-      const msg=q('#webrequestMsg');if(msg)msg.textContent='กำลังโหลด...';
-      try{const j=await webApi('list');renderWebUrls(j);if(msg)msg.textContent=''}catch(e){if(msg)msg.textContent=e.message==='unauthorized'?'กรุณาเข้าสู่ระบบใหม่':'โหลด URL ไม่สำเร็จ'}
+      const smsg=q('#webrequestMsg'),lmsg=q('#licenseWebrequestMsg');
+      try{
+        const j=await webApi('list');
+        renderWebUrls(j);
+        if(smsg)smsg.textContent='';
+        if(lmsg)lmsg.textContent='';
+      }catch(e){
+        const text=e.message==='unauthorized'?'กรุณาเข้าสู่ระบบใหม่':'โหลด URL ไม่สำเร็จ';
+        if(smsg)smsg.textContent=text;
+        if(lmsg)lmsg.textContent=text;
+      }
     }
+
     async function saveWebUrl(){
-      const input=q('#webrequestUrlInput'),msg=q('#webrequestMsg'),btn=q('#webrequestSaveBtn');
+      const input=q('#webrequestSettingsInput'),msg=q('#webrequestMsg'),btn=q('#webrequestSaveBtn');
       const url=(input?.value||'').trim();
-      if(!url){msg.textContent='กรุณาใส่ URL ก่อนบันทึก';return}
-      btn.disabled=true;msg.textContent='กำลังบันทึก...';
-      try{const j=await webApi('save',{url});renderWebUrls(j);msg.textContent='บันทึกแล้ว • เก็บประวัติย้อนหลังเรียบร้อย'}catch(e){msg.textContent=e.message==='invalid_url'?'URL ไม่ถูกต้อง กรุณาใส่ http:// หรือ https://':'บันทึกไม่สำเร็จ'}finally{btn.disabled=false}
+      if(!url){if(msg)msg.textContent='กรุณาใส่ URL ก่อนบันทึก';return}
+      btn.disabled=true;if(msg)msg.textContent='กำลังบันทึก...';
+      try{const j=await webApi('save',{url});renderWebUrls(j);if(msg)msg.textContent='บันทึกแล้ว • เก็บประวัติย้อนหลังเรียบร้อย'}catch(e){if(msg)msg.textContent=e.message==='invalid_url'?'URL ไม่ถูกต้อง กรุณาใส่ http:// หรือ https://':'บันทึกไม่สำเร็จ'}finally{btn.disabled=false}
     }
+
     async function copyWebUrl(){
-      const input=q('#webrequestUrlInput'),msg=q('#webrequestMsg'),url=(input?.value||'').trim();
+      const input=q('#webrequestDisplayInput'),msg=q('#licenseWebrequestMsg'),url=(input?.value||'').trim();
       if(!url)return;
-      try{await navigator.clipboard.writeText(url);msg.textContent='คัดลอก URL แล้ว'}catch{input.focus();input.select();document.execCommand('copy');msg.textContent='คัดลอก URL แล้ว'}
+      try{await navigator.clipboard.writeText(url);if(msg)msg.textContent='คัดลอก URL แล้ว'}catch{input.focus();input.select();document.execCommand('copy');if(msg)msg.textContent='คัดลอก URL แล้ว'}
     }
+
     async function handleHistoryClick(e){
       const restore=e.target.closest('[data-restore-url]'),del=e.target.closest('[data-delete-url]'),msg=q('#webrequestMsg');
       if(restore){
@@ -89,14 +120,17 @@
         try{const j=await webApi('delete',{id:del.dataset.deleteUrl});renderWebUrls({history:j.history,current:(j.history||[]).find(x=>x.is_current)||null});msg.textContent='ลบบันทึกย้อนหลังแล้ว'}catch(e){msg.textContent=e.message==='cannot_delete_current'?'URL ที่กำลังใช้งานอยู่ลบไม่ได้':'ลบไม่สำเร็จ'}
       }
     }
-    ensureWebPanel();remove30();wireDays();
+
+    ensureWebPanels();remove30();wireDays();
     document.title='Well License Dashboard Standard 4';
     const licenseBtn=q('.nav-btn[data-view="licenses"]');if(licenseBtn)licenseBtn.addEventListener('click',()=>setTimeout(loadWebUrls,0));
+    const settingsBtn=q('.nav-btn[data-view="settings"]');if(settingsBtn)settingsBtn.addEventListener('click',()=>setTimeout(loadWebUrls,0));
     const app=q('#appView');if(app){new MutationObserver(()=>{if(!app.classList.contains('hidden'))setTimeout(loadWebUrls,50)}).observe(app,{attributes:true,attributeFilter:['class']})}
     if(sessionStorage.getItem('well_admin_session'))loadWebUrls();
-    const mo=new MutationObserver(()=>{remove30();wireDays();ensureWebPanel();const m=q('#licenseModal');if(m&&m.classList.contains('open'))setTimeout(syncDays,0)});
+    const mo=new MutationObserver(()=>{remove30();wireDays();ensureWebPanels();const m=q('#licenseModal');if(m&&m.classList.contains('open'))setTimeout(syncDays,0)});
     mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
   }
+
   try{
     let html=await (await fetch(ORIGIN+'/?std4='+Date.now(),{cache:'no-store'})).text();
     html=html.replace(/href="\/(license-next[^\"]+)"/g,'href="'+ORIGIN+'/$1"');
@@ -107,7 +141,7 @@
         '<div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required><div class="days-input-row"><span>ใช้ได้กี่วัน</span><input id="fDays" class="input days-input" type="number" min="0" max="3650" step="1" inputmode="numeric" placeholder="เช่น 30"><span>วัน</span></div><div class="field-help">พิมพ์จำนวนวัน แล้วระบบจะคำนวณวันหมดอายุให้อัตโนมัติ</div><label class="lifetime-choice">'
       );
     }
-    const extraStyle='<style>[data-renew-license]{display:none!important}.days-input-row{display:grid;grid-template-columns:auto minmax(90px,150px) auto;align-items:center;gap:8px;margin-top:9px}.days-input-row span{font-size:12px;color:#b9c4d4}.days-input{min-height:38px!important}.webrequest-inline{flex:1;min-width:360px;max-width:720px;padding:7px 10px;border:1px solid var(--line);border-radius:12px;background:#0e1827}.webrequest-label{font-size:10px;font-weight:800;color:#91a0b6;margin-bottom:5px}.webrequest-controls{display:grid;grid-template-columns:minmax(170px,1fr) auto auto auto;gap:6px;align-items:center}.webrequest-controls .input{min-height:34px;padding:6px 9px;font-size:12px}.webrequest-msg{font-size:10px;color:var(--muted);min-height:12px;margin-top:4px}.webrequest-history{margin:-2px 0 12px}.url-history-row{border:1px solid var(--line);background:#0f1928;border-radius:11px;padding:11px;display:flex;align-items:center;justify-content:space-between;gap:10px}.url-history-row.current{border-color:#275d43}.url-history-main{min-width:0;flex:1}.url-history-main code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dce7f5}@media(max-width:1100px){#view-licenses .toolbar{align-items:flex-start}.webrequest-inline{order:3;flex-basis:100%;max-width:none;min-width:0}.webrequest-controls{grid-template-columns:minmax(0,1fr) auto auto auto}}@media(max-width:700px){.days-input-row{grid-template-columns:auto 1fr auto}.webrequest-controls{grid-template-columns:1fr 1fr}.webrequest-controls .input{grid-column:1/-1}.url-history-row{align-items:flex-start;flex-direction:column}.url-history-main code{white-space:normal;word-break:break-all}}</style>';
+    const extraStyle='<style>[data-renew-license]{display:none!important}.days-input-row{display:grid;grid-template-columns:auto minmax(90px,150px) auto;align-items:center;gap:8px;margin-top:9px}.days-input-row span{font-size:12px;color:#b9c4d4}.days-input{min-height:38px!important}.webrequest-inline{flex:1;min-width:360px;max-width:720px;padding:7px 10px;border:1px solid var(--line);border-radius:12px;background:#0e1827}.webrequest-label{font-size:10px;font-weight:800;color:#91a0b6;margin-bottom:5px}.webrequest-display-controls{display:grid;grid-template-columns:minmax(170px,1fr) auto;gap:6px;align-items:center}.webrequest-display-controls .input{min-height:34px;padding:6px 9px;font-size:12px;cursor:default}.webrequest-msg{font-size:10px;color:var(--muted);min-height:12px;margin-top:4px}.webrequest-settings-panel{grid-column:1/-1}.webrequest-settings-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.url-history-row{border:1px solid var(--line);background:#0f1928;border-radius:11px;padding:11px;display:flex;align-items:center;justify-content:space-between;gap:10px}.url-history-row.current{border-color:#275d43}.url-history-main{min-width:0;flex:1}.url-history-main code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dce7f5}@media(max-width:1100px){#view-licenses .toolbar{align-items:flex-start}.webrequest-inline{order:3;flex-basis:100%;max-width:none;min-width:0}.webrequest-display-controls{grid-template-columns:minmax(0,1fr) auto}}@media(max-width:700px){.days-input-row{grid-template-columns:auto 1fr auto}.webrequest-display-controls{grid-template-columns:1fr auto}.webrequest-settings-controls{grid-template-columns:1fr}.webrequest-settings-controls .btn{width:100%}.url-history-row{align-items:flex-start;flex-direction:column}.url-history-main code{white-space:normal;word-break:break-all}}</style>';
     html=html.replace('</head>',extraStyle+'</head>');
     const patch='<script>('+standard4Patch.toString()+')();<\/script>';
     html=html.replace('</body>',patch+'</body>');
