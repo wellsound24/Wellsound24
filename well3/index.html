@@ -1,12 +1,95 @@
 <!doctype html>
 <html lang="th">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Well License Dashboard Standard 3</title><style>body{margin:0;background:#080d14;color:#fff;font-family:system-ui,sans-serif}.loading{min-height:100vh;display:grid;place-items:center}.card{padding:24px;border:1px solid #26364e;border-radius:16px;background:#101827}</style></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Well License Dashboard Standard 4</title><style>body{margin:0;background:#080d14;color:#fff;font-family:system-ui,sans-serif}.loading{min-height:100vh;display:grid;place-items:center}.card{padding:24px;border:1px solid #26364e;border-radius:16px;background:#101827}</style></head>
 <body><div class="loading"><div class="card">กำลังเปิด Well License Dashboard...</div></div>
 <script>
 (async()=>{
   const ORIGIN='https://well-license-dashboard-next.vercel.app';
+  function standard4Patch(){
+    const q=s=>document.querySelector(s);
+    const day=()=>new Date().toISOString().slice(0,10);
+    const add=(iso,n)=>{const d=new Date((iso||day())+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+    const left=iso=>Math.max(0,Math.round((new Date(iso+'T00:00:00Z')-new Date(day()+'T00:00:00Z'))/86400000));
+    const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function remove30(){document.querySelectorAll('[data-renew-license]').forEach(x=>x.remove())}
+    function syncDays(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||!e||!l)return;if(l.checked||!e.value){d.value='';return}d.value=String(left(e.value))}
+    function syncExpiry(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||!e||!l||l.checked||d.value==='')return;const n=Math.max(0,Math.min(3650,Math.floor(Number(d.value)||0)));d.value=String(n);e.value=add(day(),n)}
+    function wireDays(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||d.dataset.wired)return;d.dataset.wired='1';d.addEventListener('input',syncExpiry);e.addEventListener('change',syncDays);l.addEventListener('change',()=>{d.disabled=l.checked;if(l.checked)d.value='';else syncDays()});syncDays()}
+    async function webApi(action,payload={}){
+      const token=sessionStorage.getItem('well_admin_session')||'';
+      if(!token)throw new Error('unauthorized');
+      const r=await fetch('/api/webrequest',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({action,...payload})});
+      const j=await r.json().catch(()=>({ok:false,error:'server_error'}));
+      if(!r.ok||!j.ok)throw new Error(j.error||'server_error');
+      return j;
+    }
+    function ensureWebPanel(){
+      const grid=q('#view-settings .settings-grid');
+      if(!grid||q('#webrequestPanel'))return;
+      grid.insertAdjacentHTML('beforeend',`<div id="webrequestPanel" class="panel webrequest-panel">
+        <div class="panel-head"><div><div class="panel-title">WebRequest URL สำหรับลูกค้า</div><div class="panel-sub">บันทึกลิงก์ไว้ใช้ส่งให้ลูกค้า และเก็บประวัติทุกครั้งที่เปลี่ยน</div></div></div>
+        <div class="webrequest-input-row"><input id="webrequestUrlInput" class="input" placeholder="ใส่ URL เช่น https://..."><button id="webrequestSaveBtn" class="btn primary" type="button">บันทึก</button><button id="webrequestCopyBtn" class="btn soft" type="button">คัดลอก</button></div>
+        <div id="webrequestMsg" class="msg"></div>
+        <div class="divider"></div>
+        <div class="panel-head"><div><div class="panel-title">บันทึกย้อนหลัง</div><div class="panel-sub">กด “นำกลับมาใช้” เพื่อเปลี่ยนกลับเป็น URL เก่า หรือ “ลบ” เพื่อลบประวัติ</div></div><button id="webrequestRefreshBtn" class="btn small" type="button">รีเฟรช</button></div>
+        <div id="webrequestHistory" class="stack"><div class="empty">ยังไม่มีประวัติ</div></div>
+      </div>`);
+      q('#webrequestSaveBtn').addEventListener('click',saveWebUrl);
+      q('#webrequestCopyBtn').addEventListener('click',copyWebUrl);
+      q('#webrequestRefreshBtn').addEventListener('click',loadWebUrls);
+      q('#webrequestHistory').addEventListener('click',handleHistoryClick);
+    }
+    function renderWebUrls(j){
+      const input=q('#webrequestUrlInput'),list=q('#webrequestHistory'),copy=q('#webrequestCopyBtn');
+      if(!input||!list)return;
+      const current=j.current||null, rows=Array.isArray(j.history)?j.history:[];
+      input.value=current?.url||'';
+      copy.disabled=!input.value;
+      list.innerHTML=rows.length?rows.map(r=>`<div class="url-history-row ${r.is_current?'current':''}">
+        <div class="url-history-main"><code>${esc(r.url)}</code><div class="subline">${new Date(r.created_at).toLocaleString('th-TH')}</div></div>
+        <div class="row-actions">${r.is_current?'<span class="badge good"><span class="status-dot"></span>ใช้งานอยู่</span>':`<button class="btn small" type="button" data-restore-url="${r.id}">นำกลับมาใช้</button><button class="btn small danger" type="button" data-delete-url="${r.id}">ลบ</button>`}</div>
+      </div>`).join(''):'<div class="empty">ยังไม่มีประวัติ</div>';
+    }
+    async function loadWebUrls(){
+      ensureWebPanel();
+      const token=sessionStorage.getItem('well_admin_session')||'';
+      if(!token)return;
+      const msg=q('#webrequestMsg');if(msg)msg.textContent='กำลังโหลด...';
+      try{const j=await webApi('list');renderWebUrls(j);if(msg)msg.textContent=''}catch(e){if(msg)msg.textContent=e.message==='unauthorized'?'กรุณาเข้าสู่ระบบใหม่':'โหลดข้อมูลไม่สำเร็จ'}
+    }
+    async function saveWebUrl(){
+      const input=q('#webrequestUrlInput'),msg=q('#webrequestMsg'),btn=q('#webrequestSaveBtn');
+      const url=(input?.value||'').trim();
+      if(!url){msg.textContent='กรุณาใส่ URL ก่อนบันทึก';return}
+      btn.disabled=true;msg.textContent='กำลังบันทึก...';
+      try{const j=await webApi('save',{url});renderWebUrls(j);msg.textContent='บันทึกแล้ว และเก็บประวัติย้อนหลังเรียบร้อย'}catch(e){msg.textContent=e.message==='invalid_url'?'URL ไม่ถูกต้อง กรุณาใส่ http:// หรือ https://':'บันทึกไม่สำเร็จ'}finally{btn.disabled=false}
+    }
+    async function copyWebUrl(){
+      const input=q('#webrequestUrlInput'),msg=q('#webrequestMsg'),url=(input?.value||'').trim();
+      if(!url)return;
+      try{await navigator.clipboard.writeText(url);msg.textContent='คัดลอก URL แล้ว'}catch{input.focus();input.select();document.execCommand('copy');msg.textContent='คัดลอก URL แล้ว'}
+    }
+    async function handleHistoryClick(e){
+      const restore=e.target.closest('[data-restore-url]'),del=e.target.closest('[data-delete-url]'),msg=q('#webrequestMsg');
+      if(restore){
+        if(!confirm('นำ URL นี้กลับมาใช้เป็นค่าปัจจุบัน?'))return;
+        try{const j=await webApi('restore',{id:restore.dataset.restoreUrl});renderWebUrls(j);msg.textContent='นำ URL เก่ากลับมาใช้แล้ว'}catch{msg.textContent='นำ URL กลับมาใช้ไม่สำเร็จ'}
+      }
+      if(del){
+        if(!confirm('ลบบันทึกย้อนหลังรายการนี้?'))return;
+        try{const j=await webApi('delete',{id:del.dataset.deleteUrl});renderWebUrls({history:j.history,current:(j.history||[]).find(x=>x.is_current)||null});msg.textContent='ลบบันทึกย้อนหลังแล้ว'}catch(e){msg.textContent=e.message==='cannot_delete_current'?'URL ที่กำลังใช้งานอยู่ลบไม่ได้':'ลบไม่สำเร็จ'}
+      }
+    }
+    ensureWebPanel();remove30();wireDays();
+    document.title='Well License Dashboard Standard 4';
+    const settingsBtn=q('.nav-btn[data-view="settings"]');if(settingsBtn)settingsBtn.addEventListener('click',()=>setTimeout(loadWebUrls,0));
+    const app=q('#appView');if(app){new MutationObserver(()=>{if(!app.classList.contains('hidden'))loadWebUrls()}).observe(app,{attributes:true,attributeFilter:['class']})}
+    if(sessionStorage.getItem('well_admin_session'))loadWebUrls();
+    const mo=new MutationObserver(()=>{remove30();wireDays();const m=q('#licenseModal');if(m&&m.classList.contains('open'))setTimeout(syncDays,0)});
+    mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+  }
   try{
-    let html=await (await fetch(ORIGIN+'/?std3='+Date.now(),{cache:'no-store'})).text();
+    let html=await (await fetch(ORIGIN+'/?std4='+Date.now(),{cache:'no-store'})).text();
     html=html.replace(/href="\/(license-next[^\"]+)"/g,'href="'+ORIGIN+'/$1"');
     html=html.replace(/src="\/(license-next[^\"]+)"/g,'src="'+ORIGIN+'/$1"');
     if(!html.includes('id="fDays"')){
@@ -15,21 +98,9 @@
         '<div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required><div class="days-input-row"><span>ใช้ได้กี่วัน</span><input id="fDays" class="input days-input" type="number" min="0" max="3650" step="1" inputmode="numeric" placeholder="เช่น 30"><span>วัน</span></div><div class="field-help">พิมพ์จำนวนวัน แล้วระบบจะคำนวณวันหมดอายุให้อัตโนมัติ</div><label class="lifetime-choice">'
       );
     }
-    const extraStyle='<style>[data-renew-license]{display:none!important}.days-input-row{display:grid;grid-template-columns:auto minmax(90px,150px) auto;align-items:center;gap:8px;margin-top:9px}.days-input-row span{font-size:12px;color:#b9c4d4}.days-input{min-height:38px!important}@media(max-width:600px){.days-input-row{grid-template-columns:auto 1fr auto}}</style>';
+    const extraStyle='<style>[data-renew-license]{display:none!important}.days-input-row{display:grid;grid-template-columns:auto minmax(90px,150px) auto;align-items:center;gap:8px;margin-top:9px}.days-input-row span{font-size:12px;color:#b9c4d4}.days-input{min-height:38px!important}.webrequest-panel{grid-column:1/-1}.webrequest-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}.url-history-row{border:1px solid var(--line);background:#0f1928;border-radius:11px;padding:11px;display:flex;align-items:center;justify-content:space-between;gap:10px}.url-history-row.current{border-color:#275d43}.url-history-main{min-width:0;flex:1}.url-history-main code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dce7f5}@media(max-width:700px){.days-input-row{grid-template-columns:auto 1fr auto}.webrequest-input-row{grid-template-columns:1fr 1fr}.webrequest-input-row .input{grid-column:1/-1}.url-history-row{align-items:flex-start;flex-direction:column}.url-history-main code{white-space:normal;word-break:break-all}}</style>';
     html=html.replace('</head>',extraStyle+'</head>');
-    const patch=`<script>(function(){
-      const q=s=>document.querySelector(s);
-      const day=()=>new Date().toISOString().slice(0,10);
-      const add=(iso,n)=>{const d=new Date((iso||day())+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
-      const left=iso=>Math.max(0,Math.round((new Date(iso+'T00:00:00Z')-new Date(day()+'T00:00:00Z'))/86400000));
-      function remove30(){document.querySelectorAll('[data-renew-license]').forEach(x=>x.remove())}
-      function syncDays(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||!e||!l)return;if(l.checked||!e.value){d.value='';return}d.value=String(left(e.value))}
-      function syncExpiry(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||!e||!l||l.checked||d.value==='')return;const n=Math.max(0,Math.min(3650,Math.floor(Number(d.value)||0)));d.value=String(n);e.value=add(day(),n)}
-      function wire(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||d.dataset.wired)return;d.dataset.wired='1';d.addEventListener('input',syncExpiry);e.addEventListener('change',syncDays);l.addEventListener('change',()=>{d.disabled=l.checked;if(l.checked)d.value='';else syncDays()});syncDays()}
-      const mo=new MutationObserver(()=>{remove30();wire();const m=q('#licenseModal');if(m&&m.classList.contains('open'))setTimeout(syncDays,0)});
-      mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
-      remove30();wire();
-    })();<\/script>`;
+    const patch='<script>('+standard4Patch.toString()+')();<\/script>';
     html=html.replace('</body>',patch+'</body>');
     document.open();document.write(html);document.close();
   }catch(e){document.body.innerHTML='<div class="loading"><div class="card">เปิด Dashboard ไม่สำเร็จ กรุณาลองใหม่</div></div>'}
