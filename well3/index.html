@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="th">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Well License Dashboard Standard 3</title><style>body{margin:0;background:#080d14;color:#fff;font-family:system-ui,sans-serif}.loading{min-height:100vh;display:grid;place-items:center}.card{padding:24px;border:1px solid #26364e;border-radius:16px;background:#101827}</style></head>
+<body><div class="loading"><div class="card">กำลังเปิด Well License Dashboard...</div></div>
+<script>
+(async()=>{
+  const ORIGIN='https://well-license-dashboard-next.vercel.app';
+  try{
+    let html=await (await fetch(ORIGIN+'/?std3='+Date.now(),{cache:'no-store'})).text();
+    html=html.replace(/href="\/(license-next[^\"]+)"/g,'href="'+ORIGIN+'/$1"');
+    html=html.replace(/src="\/(license-next[^\"]+)"/g,'src="'+ORIGIN+'/$1"');
+    if(!html.includes('id="fDays"')){
+      html=html.replace(
+        '<div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required><label class="lifetime-choice">',
+        '<div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required><div class="days-input-row"><span>ใช้ได้กี่วัน</span><input id="fDays" class="input days-input" type="number" min="0" max="3650" step="1" inputmode="numeric" placeholder="เช่น 30"><span>วัน</span></div><div class="field-help">พิมพ์จำนวนวัน แล้วระบบจะคำนวณวันหมดอายุให้อัตโนมัติ</div><label class="lifetime-choice">'
+      );
+    }
+    const extraStyle='<style>[data-renew-license]{display:none!important}.days-input-row{display:grid;grid-template-columns:auto minmax(90px,150px) auto;align-items:center;gap:8px;margin-top:9px}.days-input-row span{font-size:12px;color:#b9c4d4}.days-input{min-height:38px!important}@media(max-width:600px){.days-input-row{grid-template-columns:auto 1fr auto}}</style>';
+    html=html.replace('</head>',extraStyle+'</head>');
+    const patch=`<script>(function(){
+      const q=s=>document.querySelector(s);
+      const day=()=>new Date().toISOString().slice(0,10);
+      const add=(iso,n)=>{const d=new Date((iso||day())+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+      const left=iso=>Math.max(0,Math.round((new Date(iso+'T00:00:00Z')-new Date(day()+'T00:00:00Z'))/86400000));
+      function remove30(){document.querySelectorAll('[data-renew-license]').forEach(x=>x.remove())}
+      function syncDays(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||!e||!l)return;if(l.checked||!e.value){d.value='';return}d.value=String(left(e.value))}
+      function syncExpiry(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||!e||!l||l.checked||d.value==='')return;const n=Math.max(0,Math.min(3650,Math.floor(Number(d.value)||0)));d.value=String(n);e.value=add(day(),n)}
+      function wire(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||d.dataset.wired)return;d.dataset.wired='1';d.addEventListener('input',syncExpiry);e.addEventListener('change',syncDays);l.addEventListener('change',()=>{d.disabled=l.checked;if(l.checked)d.value='';else syncDays()});syncDays()}
+      const mo=new MutationObserver(()=>{remove30();wire();const m=q('#licenseModal');if(m&&m.classList.contains('open'))setTimeout(syncDays,0)});
+      mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+      remove30();wire();
+    })();<\/script>`;
+    html=html.replace('</body>',patch+'</body>');
+    document.open();document.write(html);document.close();
+  }catch(e){document.body.innerHTML='<div class="loading"><div class="card">เปิด Dashboard ไม่สำเร็จ กรุณาลองใหม่</div></div>'}
+})();
+</script></body></html>
