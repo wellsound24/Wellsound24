@@ -12,6 +12,66 @@
     const leftDays=iso=>Math.max(0,Math.round((new Date(iso+'T00:00:00Z')-new Date(day()+'T00:00:00Z'))/86400000));
     const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+    function ensureLoginTools(){
+      const form=q('#loginForm'),user=q('#loginUsername'),pw=q('#loginPassword'),loginBtn=q('#loginBtn');
+      if(!form||!user||!pw||!loginBtn||q('#loginRemember'))return;
+      form.setAttribute('autocomplete','on');
+      user.setAttribute('autocomplete','username');
+      pw.setAttribute('autocomplete','current-password');
+      const parent=pw.parentElement;
+      const wrap=document.createElement('div');
+      wrap.className='login-password-wrap';
+      parent.insertBefore(wrap,pw);
+      wrap.appendChild(pw);
+      const toggle=document.createElement('button');
+      toggle.id='toggleLoginPassword';
+      toggle.className='btn soft login-show-btn';
+      toggle.type='button';
+      toggle.textContent='แสดง';
+      toggle.setAttribute('aria-label','แสดง Password');
+      wrap.appendChild(toggle);
+      loginBtn.insertAdjacentHTML('beforebegin',`<div class="login-remember-block"><label class="login-remember"><input id="loginRemember" type="checkbox"> <span>จำ Password / การเข้าสู่ระบบ</span></label><div class="login-remember-note">ระบบจะจำสถานะการเข้าสู่ระบบและให้เบราว์เซอร์ช่วยจำ Password โดยไม่เก็บ Password เป็นข้อความในหน้าเว็บ</div></div>`);
+      const remember=q('#loginRemember');
+      try{
+        remember.checked=localStorage.getItem('well_admin_remember')==='1';
+        const savedUser=localStorage.getItem('well_admin_remember_user')||'';
+        if(remember.checked&&savedUser)user.value=savedUser;
+      }catch{}
+      toggle.addEventListener('click',()=>{
+        const showing=pw.type==='text';
+        pw.type=showing?'password':'text';
+        toggle.textContent=showing?'แสดง':'ซ่อน';
+        toggle.setAttribute('aria-label',showing?'แสดง Password':'ซ่อน Password');
+      });
+      form.addEventListener('submit',()=>{
+        const keep=remember.checked;
+        try{
+          if(keep){
+            localStorage.setItem('well_admin_remember','1');
+            localStorage.setItem('well_admin_remember_user',user.value.trim());
+          }else{
+            localStorage.removeItem('well_admin_remember');
+            localStorage.removeItem('well_admin_remember_user');
+            localStorage.removeItem('well_admin_remember_token');
+          }
+        }catch{}
+        let tries=0;
+        const timer=setInterval(()=>{
+          tries++;
+          const token=sessionStorage.getItem('well_admin_session')||'';
+          if(token||tries>=24){
+            clearInterval(timer);
+            if(token&&keep){try{localStorage.setItem('well_admin_remember_token',token)}catch{}}
+          }
+        },250);
+      });
+      const logout=q('#logoutBtn');
+      if(logout&&!logout.dataset.rememberWired){
+        logout.dataset.rememberWired='1';
+        logout.addEventListener('click',()=>{try{localStorage.removeItem('well_admin_remember_token')}catch{}},true);
+      }
+    }
+
     function remove30(){document.querySelectorAll('[data-renew-license]').forEach(x=>x.remove())}
     function syncDays(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||!e||!l)return;if(l.checked||!e.value){d.value='';return}d.value=String(leftDays(e.value))}
     function syncExpiry(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||!e||!l||l.checked||d.value==='')return;const n=Math.max(0,Math.min(3650,Math.floor(Number(d.value)||0)));d.value=String(n);e.value=add(day(),n)}
@@ -121,18 +181,20 @@
       }
     }
 
-    ensureWebPanels();remove30();wireDays();
+    ensureLoginTools();ensureWebPanels();remove30();wireDays();
     document.title='Well License Dashboard Standard 4';
     const licenseBtn=q('.nav-btn[data-view="licenses"]');if(licenseBtn)licenseBtn.addEventListener('click',()=>setTimeout(loadWebUrls,0));
     const settingsBtn=q('.nav-btn[data-view="settings"]');if(settingsBtn)settingsBtn.addEventListener('click',()=>setTimeout(loadWebUrls,0));
     const app=q('#appView');if(app){new MutationObserver(()=>{if(!app.classList.contains('hidden'))setTimeout(loadWebUrls,50)}).observe(app,{attributes:true,attributeFilter:['class']})}
     if(sessionStorage.getItem('well_admin_session'))loadWebUrls();
-    const mo=new MutationObserver(()=>{remove30();wireDays();ensureWebPanels();const m=q('#licenseModal');if(m&&m.classList.contains('open'))setTimeout(syncDays,0)});
+    const mo=new MutationObserver(()=>{ensureLoginTools();remove30();wireDays();ensureWebPanels();const m=q('#licenseModal');if(m&&m.classList.contains('open'))setTimeout(syncDays,0)});
     mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
   }
 
   try{
     let html=await (await fetch(ORIGIN+'/?std4='+Date.now(),{cache:'no-store'})).text();
+    const rememberBoot='<script>(function(){try{if(localStorage.getItem(\"well_admin_remember\")==\"1\"){const t=localStorage.getItem(\"well_admin_remember_token\");if(t&&!sessionStorage.getItem(\"well_admin_session\"))sessionStorage.setItem(\"well_admin_session\",t)}}catch(e){}})();<\\/script>';
+    html=html.replace(/<script src=\"\/license-next-1\.js[^\"]*\"><\/script>/,rememberBoot+'$&');
     html=html.replace(/href="\/(license-next[^\"]+)"/g,'href="'+ORIGIN+'/$1"');
     html=html.replace(/src="\/(license-next[^\"]+)"/g,'src="'+ORIGIN+'/$1"');
     if(!html.includes('id="fDays"')){
@@ -141,7 +203,7 @@
         '<div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required><div class="days-input-row"><span>ใช้ได้กี่วัน</span><input id="fDays" class="input days-input" type="number" min="0" max="3650" step="1" inputmode="numeric" placeholder="เช่น 30"><span>วัน</span></div><div class="field-help">พิมพ์จำนวนวัน แล้วระบบจะคำนวณวันหมดอายุให้อัตโนมัติ</div><label class="lifetime-choice">'
       );
     }
-    const extraStyle='<style>[data-renew-license]{display:none!important}.days-input-row{display:grid;grid-template-columns:auto minmax(90px,150px) auto;align-items:center;gap:8px;margin-top:9px}.days-input-row span{font-size:12px;color:#b9c4d4}.days-input{min-height:38px!important}.webrequest-inline{flex:1;min-width:360px;max-width:720px;padding:7px 10px;border:1px solid var(--line);border-radius:12px;background:#0e1827}.webrequest-label{font-size:10px;font-weight:800;color:#91a0b6;margin-bottom:5px}.webrequest-display-controls{display:grid;grid-template-columns:minmax(170px,1fr) auto;gap:6px;align-items:center}.webrequest-display-controls .input{min-height:34px;padding:6px 9px;font-size:12px;cursor:default}.webrequest-msg{font-size:10px;color:var(--muted);min-height:12px;margin-top:4px}.webrequest-settings-panel{grid-column:1/-1}.webrequest-settings-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.url-history-row{border:1px solid var(--line);background:#0f1928;border-radius:11px;padding:11px;display:flex;align-items:center;justify-content:space-between;gap:10px}.url-history-row.current{border-color:#275d43}.url-history-main{min-width:0;flex:1}.url-history-main code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dce7f5}@media(max-width:1100px){#view-licenses .toolbar{align-items:flex-start}.webrequest-inline{order:3;flex-basis:100%;max-width:none;min-width:0}.webrequest-display-controls{grid-template-columns:minmax(0,1fr) auto}}@media(max-width:700px){.days-input-row{grid-template-columns:auto 1fr auto}.webrequest-display-controls{grid-template-columns:1fr auto}.webrequest-settings-controls{grid-template-columns:1fr}.webrequest-settings-controls .btn{width:100%}.url-history-row{align-items:flex-start;flex-direction:column}.url-history-main code{white-space:normal;word-break:break-all}}</style>';
+    const extraStyle='<style>[data-renew-license]{display:none!important}.days-input-row{display:grid;grid-template-columns:auto minmax(90px,150px) auto;align-items:center;gap:8px;margin-top:9px}.days-input-row span{font-size:12px;color:#b9c4d4}.days-input{min-height:38px!important}.webrequest-inline{flex:1;min-width:360px;max-width:720px;padding:7px 10px;border:1px solid var(--line);border-radius:12px;background:#0e1827}.webrequest-label{font-size:10px;font-weight:800;color:#91a0b6;margin-bottom:5px}.webrequest-display-controls{display:grid;grid-template-columns:minmax(170px,1fr) auto;gap:6px;align-items:center}.webrequest-display-controls .input{min-height:34px;padding:6px 9px;font-size:12px;cursor:default}.webrequest-msg{font-size:10px;color:var(--muted);min-height:12px;margin-top:4px}.webrequest-settings-panel{grid-column:1/-1}.webrequest-settings-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.url-history-row{border:1px solid var(--line);background:#0f1928;border-radius:11px;padding:11px;display:flex;align-items:center;justify-content:space-between;gap:10px}.url-history-row.current{border-color:#275d43}.url-history-main{min-width:0;flex:1}.url-history-main code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dce7f5}.login-password-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.login-password-wrap .input{min-width:0}.login-show-btn{min-width:64px;min-height:42px}.login-remember-block{margin-top:2px}.login-remember{display:flex;align-items:center;gap:7px;font-size:12px;color:#dce7f5;cursor:pointer}.login-remember input{width:16px;height:16px}.login-remember-note{font-size:10px;line-height:1.35;color:#91a0b6;margin:4px 0 2px 23px}@media(max-width:1100px){#view-licenses .toolbar{align-items:flex-start}.webrequest-inline{order:3;flex-basis:100%;max-width:none;min-width:0}.webrequest-display-controls{grid-template-columns:minmax(0,1fr) auto}}@media(max-width:700px){.days-input-row{grid-template-columns:auto 1fr auto}.webrequest-display-controls{grid-template-columns:1fr auto}.webrequest-settings-controls{grid-template-columns:1fr}.webrequest-settings-controls .btn{width:100%}.url-history-row{align-items:flex-start;flex-direction:column}.url-history-main code{white-space:normal;word-break:break-all}}</style>';
     html=html.replace('</head>',extraStyle+'</head>');
     const patch='<script>('+standard4Patch.toString()+')();<\/script>';
     html=html.replace('</body>',patch+'</body>');
