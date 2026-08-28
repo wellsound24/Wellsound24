@@ -87,14 +87,46 @@
     function wireDays(){const d=q('#fDays'),e=q('#fExpiry'),l=q('#fLifetime');if(!d||d.dataset.wired)return;d.dataset.wired='1';d.addEventListener('input',syncExpiry);e.addEventListener('change',syncDays);l.addEventListener('change',()=>{d.disabled=l.checked;if(l.checked)d.value='';else syncDays()});syncDays()}
 
     const urlCfg={
-      register:{label:'Register URL',display:'registerDisplayInput',copy:'registerCopyBtn',displayMsg:'registerDisplayMsg',settings:'registerSettingsInput',save:'registerSaveBtn',settingsMsg:'registerSettingsMsg',history:'registerHistory'},
-      webrequest:{label:'WebRequest URL',display:'webrequestDisplayInput',copy:'webrequestCopyBtn',displayMsg:'webrequestDisplayMsg',settings:'webrequestSettingsInput',save:'webrequestSaveBtn',settingsMsg:'webrequestSettingsMsg',history:'webrequestHistory'}
+      register_usd:{
+        label:'Register USD',
+        display:'registerUsdDisplayInput',
+        copy:'registerUsdCopyBtn',
+        displayMsg:'registerUsdDisplayMsg',
+        settings:'registerUsdSettingsInput',
+        save:'registerUsdSaveBtn',
+        settingsMsg:'registerUsdSettingsMsg',
+        history:'registerUsdHistory'
+      },
+      register_usc:{
+        label:'Register USC',
+        display:'registerUscDisplayInput',
+        copy:'registerUscCopyBtn',
+        displayMsg:'registerUscDisplayMsg',
+        settings:'registerUscSettingsInput',
+        save:'registerUscSaveBtn',
+        settingsMsg:'registerUscSettingsMsg',
+        history:'registerUscHistory'
+      },
+      webrequest:{
+        label:'WebRequest URL',
+        display:'webrequestDisplayInput',
+        copy:'webrequestCopyBtn',
+        displayMsg:'webrequestDisplayMsg',
+        settings:'webrequestSettingsInput',
+        save:'webrequestSaveBtn',
+        settingsMsg:'webrequestSettingsMsg',
+        history:'webrequestHistory'
+      }
     };
 
     async function urlApi(resource,action,payload={}){
       const token=sessionStorage.getItem('well_admin_session')||'';
       if(!token)throw new Error('unauthorized');
-      const r=await fetch('/api/webrequest',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({resource,action,...payload})});
+      const r=await fetch('/api/webrequest',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+        body:JSON.stringify({resource,action,...payload})
+      });
       const j=await r.json().catch(()=>({ok:false,error:'server_error'}));
       if(!r.ok||!j.ok)throw new Error(j.error||'server_error');
       return j;
@@ -108,12 +140,20 @@
 
       left.insertAdjacentHTML('afterend',`<div id="licenseUrlPair" class="license-url-pair">
         <div class="url-display-card">
-          <div class="webrequest-label">Register URL</div>
+          <div class="webrequest-label">Register USD</div>
           <div class="url-display-controls">
-            <input id="registerDisplayInput" class="input" readonly placeholder="ยังไม่ได้บันทึก URL">
-            <button id="registerCopyBtn" class="btn soft small" type="button" disabled>คัดลอก</button>
+            <input id="registerUsdDisplayInput" class="input" readonly placeholder="ยังไม่ได้บันทึก URL">
+            <button id="registerUsdCopyBtn" class="btn soft small" type="button" disabled>คัดลอก</button>
           </div>
-          <div id="registerDisplayMsg" class="webrequest-msg"></div>
+          <div id="registerUsdDisplayMsg" class="webrequest-msg"></div>
+        </div>
+        <div class="url-display-card">
+          <div class="webrequest-label">Register USC</div>
+          <div class="url-display-controls">
+            <input id="registerUscDisplayInput" class="input" readonly placeholder="ยังไม่ได้บันทึก URL">
+            <button id="registerUscCopyBtn" class="btn soft small" type="button" disabled>คัดลอก</button>
+          </div>
+          <div id="registerUscDisplayMsg" class="webrequest-msg"></div>
         </div>
         <div class="url-display-card">
           <div class="webrequest-label">WebRequest URL</div>
@@ -125,7 +165,8 @@
         </div>
       </div>`);
 
-      q('#registerCopyBtn').addEventListener('click',()=>copyUrl('register'));
+      q('#registerUsdCopyBtn').addEventListener('click',()=>copyUrl('register_usd'));
+      q('#registerUscCopyBtn').addEventListener('click',()=>copyUrl('register_usc'));
       q('#webrequestCopyBtn').addEventListener('click',()=>copyUrl('webrequest'));
     }
 
@@ -146,28 +187,37 @@
 
     function ensureSettingsUrlPanels(){
       const grid=q('#view-settings .settings-grid');
-      if(!grid||q('#registerSettingsPanel'))return;
+      if(!grid||q('#registerUsdSettingsPanel'))return;
 
-      grid.insertAdjacentHTML('beforeend',`<div id="registerSettingsPanel" class="url-settings-holder">
-        ${settingsPanelHtml('register','ตั้งค่า Register URL สำหรับลูกค้า','ลิงก์สำหรับส่งให้ลูกค้าเข้าหน้า Register แก้ไขและบันทึกได้เฉพาะในหน้าตั้งค่า')}
+      grid.insertAdjacentHTML('beforeend',`<div id="registerUsdSettingsPanel" class="url-settings-holder">
+        ${settingsPanelHtml('register_usd','ตั้งค่า Register USD','ลิงก์สำหรับส่งให้ลูกค้าเข้าหน้า Register ของบัญชี USD แก้ไขและบันทึกได้เฉพาะในหน้าตั้งค่า')}
+      </div>
+      <div id="registerUscSettingsPanel" class="url-settings-holder">
+        ${settingsPanelHtml('register_usc','ตั้งค่า Register USC','Register เดิมเปลี่ยนชื่อเป็น Register USC และยังใช้ข้อมูลกับประวัติเดิมต่อเนื่อง')}
       </div>
       <div id="webrequestSettingsPanel" class="url-settings-holder">
         ${settingsPanelHtml('webrequest','ตั้งค่า WebRequest URL สำหรับลูกค้า','แก้ไขและบันทึก URL ได้เฉพาะในหน้านี้ เพื่อลดการกดเปลี่ยนโดยไม่ตั้งใจ')}
       </div>`);
 
-      q('#registerSaveBtn').addEventListener('click',()=>saveUrl('register'));
+      q('#registerUsdSaveBtn').addEventListener('click',()=>saveUrl('register_usd'));
+      q('#registerUscSaveBtn').addEventListener('click',()=>saveUrl('register_usc'));
       q('#webrequestSaveBtn').addEventListener('click',()=>saveUrl('webrequest'));
-      q('#registerHistory').addEventListener('click',handleUrlHistoryClick);
+      q('#registerUsdHistory').addEventListener('click',handleUrlHistoryClick);
+      q('#registerUscHistory').addEventListener('click',handleUrlHistoryClick);
       q('#webrequestHistory').addEventListener('click',handleUrlHistoryClick);
     }
 
-    function ensureUrlPanels(){ensureLicenseUrlPanels();ensureSettingsUrlPanels()}
+    function ensureUrlPanels(){
+      ensureLicenseUrlPanels();
+      ensureSettingsUrlPanels();
+    }
 
     function renderUrlResource(resource,j){
       const c=urlCfg[resource];
       const display=q('#'+c.display),edit=q('#'+c.settings),list=q('#'+c.history),copy=q('#'+c.copy);
       const current=j.current||null, rows=Array.isArray(j.history)?j.history:[];
       const url=current?.url||'';
+
       if(display)display.value=url;
       if(edit)edit.value=url;
       if(copy)copy.disabled=!url;
@@ -185,6 +235,7 @@
       const token=sessionStorage.getItem('well_admin_session')||'';
       if(!token)return;
       const c=urlCfg[resource],smsg=q('#'+c.settingsMsg),dmsg=q('#'+c.displayMsg);
+
       try{
         const j=await urlApi(resource,'list');
         renderUrlResource(resource,j);
@@ -197,75 +248,130 @@
       }
     }
 
-    function loadAllUrls(){loadUrl('register');loadUrl('webrequest')}
+    function loadAllUrls(){
+      loadUrl('register_usd');
+      loadUrl('register_usc');
+      loadUrl('webrequest');
+    }
 
     async function saveUrl(resource){
       const c=urlCfg[resource],input=q('#'+c.settings),msg=q('#'+c.settingsMsg),btn=q('#'+c.save);
       const url=(input?.value||'').trim();
       if(!url){if(msg)msg.textContent='กรุณาใส่ URL ก่อนบันทึก';return}
       btn.disabled=true;if(msg)msg.textContent='กำลังบันทึก...';
+
       try{
         const j=await urlApi(resource,'save',{url});
         renderUrlResource(resource,j);
         if(msg)msg.textContent='บันทึกแล้ว • เก็บประวัติย้อนหลังเรียบร้อย';
       }catch(e){
         if(msg)msg.textContent=e.message==='invalid_url'?'URL ไม่ถูกต้อง กรุณาใส่ http:// หรือ https://':'บันทึกไม่สำเร็จ';
-      }finally{btn.disabled=false}
+      }finally{
+        btn.disabled=false;
+      }
     }
 
     async function copyUrl(resource){
       const c=urlCfg[resource],input=q('#'+c.display),msg=q('#'+c.displayMsg),url=(input?.value||'').trim();
       if(!url)return;
-      try{await navigator.clipboard.writeText(url);if(msg)msg.textContent='คัดลอก URL แล้ว'}catch{input.focus();input.select();document.execCommand('copy');if(msg)msg.textContent='คัดลอก URL แล้ว'}
+      try{
+        await navigator.clipboard.writeText(url);
+        if(msg)msg.textContent='คัดลอก URL แล้ว';
+      }catch{
+        input.focus();input.select();document.execCommand('copy');
+        if(msg)msg.textContent='คัดลอก URL แล้ว';
+      }
     }
 
     async function handleUrlHistoryClick(e){
       const btn=e.target.closest('[data-url-action]');
       if(!btn)return;
-      const resource=btn.dataset.urlResource,action=btn.dataset.urlAction,id=btn.dataset.urlId,c=urlCfg[resource];
+      const resource=btn.dataset.urlResource;
+      const action=btn.dataset.urlAction;
+      const id=btn.dataset.urlId;
+      const c=urlCfg[resource];
       if(!c)return;
       const msg=q('#'+c.settingsMsg);
 
       if(action==='restore'){
         if(!confirm('นำ URL นี้กลับมาใช้เป็นค่าปัจจุบัน?'))return;
-        try{const j=await urlApi(resource,'restore',{id});renderUrlResource(resource,j);if(msg)msg.textContent='นำ URL เก่ากลับมาใช้แล้ว'}catch{if(msg)msg.textContent='นำ URL กลับมาใช้ไม่สำเร็จ'}
+        try{
+          const j=await urlApi(resource,'restore',{id});
+          renderUrlResource(resource,j);
+          if(msg)msg.textContent='นำ URL เก่ากลับมาใช้แล้ว';
+        }catch{
+          if(msg)msg.textContent='นำ URL กลับมาใช้ไม่สำเร็จ';
+        }
       }
 
       if(action==='delete'){
         if(!confirm('ลบบันทึกย้อนหลังรายการนี้?'))return;
-        try{const j=await urlApi(resource,'delete',{id});const rows=j.history||[];renderUrlResource(resource,{history:rows,current:rows.find(x=>x.is_current)||null});if(msg)msg.textContent='ลบบันทึกย้อนหลังแล้ว'}catch(err){if(msg)msg.textContent=err.message==='cannot_delete_current'?'URL ที่กำลังใช้งานอยู่ลบไม่ได้':'ลบไม่สำเร็จ'}
+        try{
+          const j=await urlApi(resource,'delete',{id});
+          const rows=j.history||[];
+          renderUrlResource(resource,{history:rows,current:rows.find(x=>x.is_current)||null});
+          if(msg)msg.textContent='ลบบันทึกย้อนหลังแล้ว';
+        }catch(err){
+          if(msg)msg.textContent=err.message==='cannot_delete_current'?'URL ที่กำลังใช้งานอยู่ลบไม่ได้':'ลบไม่สำเร็จ';
+        }
       }
     }
 
     ensureLoginTools();ensureUrlPanels();remove30();wireDays();
     document.title='Well License Dashboard Standard 4';
 
-    const licenseBtn=q('.nav-btn[data-view="licenses"]');if(licenseBtn)licenseBtn.addEventListener('click',()=>setTimeout(loadAllUrls,0));
-    const settingsBtn=q('.nav-btn[data-view="settings"]');if(settingsBtn)settingsBtn.addEventListener('click',()=>setTimeout(loadAllUrls,0));
-    const app=q('#appView');if(app){new MutationObserver(()=>{if(!app.classList.contains('hidden'))setTimeout(loadAllUrls,50)}).observe(app,{attributes:true,attributeFilter:['class']})}
+    const licenseBtn=q('.nav-btn[data-view="licenses"]');
+    if(licenseBtn)licenseBtn.addEventListener('click',()=>setTimeout(loadAllUrls,0));
+    const settingsBtn=q('.nav-btn[data-view="settings"]');
+    if(settingsBtn)settingsBtn.addEventListener('click',()=>setTimeout(loadAllUrls,0));
+
+    const app=q('#appView');
+    if(app){
+      new MutationObserver(()=>{
+        if(!app.classList.contains('hidden'))setTimeout(loadAllUrls,50);
+      }).observe(app,{attributes:true,attributeFilter:['class']});
+    }
+
     if(sessionStorage.getItem('well_admin_session'))loadAllUrls();
 
-    const mo=new MutationObserver(()=>{ensureLoginTools();remove30();wireDays();ensureUrlPanels();const m=q('#licenseModal');if(m&&m.classList.contains('open'))setTimeout(syncDays,0)});
+    const mo=new MutationObserver(()=>{
+      ensureLoginTools();
+      remove30();
+      wireDays();
+      ensureUrlPanels();
+      const m=q('#licenseModal');
+      if(m&&m.classList.contains('open'))setTimeout(syncDays,0);
+    });
     mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
   }
 
   try{
     let html=await (await fetch(ORIGIN+'/?std4='+Date.now(),{cache:'no-store'})).text();
+
     const rememberBoot='<script>(function(){try{if(localStorage.getItem("well_admin_remember")==="1"){const t=localStorage.getItem("well_admin_remember_token");if(t&&!sessionStorage.getItem("well_admin_session"))sessionStorage.setItem("well_admin_session",t)}}catch(e){}})();<\/script>';
     html=html.replace(/<script src="\/license-next-1\.js[^"]*"><\/script>/,rememberBoot+'$&');
+
     html=html.replace(/href="\/(license-next[^"]+)"/g,'href="'+ORIGIN+'/$1"');
     html=html.replace(/src="\/(license-next[^"]+)"/g,'src="'+ORIGIN+'/$1"');
 
     if(!html.includes('id="fDays"')){
-      html=html.replace('<div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required><label class="lifetime-choice">','<div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required><div class="days-input-row"><span>ใช้ได้กี่วัน</span><input id="fDays" class="input days-input" type="number" min="0" max="3650" step="1" inputmode="numeric" placeholder="เช่น 30"><span>วัน</span></div><div class="field-help">พิมพ์จำนวนวัน แล้วระบบจะคำนวณวันหมดอายุให้อัตโนมัติ</div><label class="lifetime-choice">');
+      html=html.replace(
+        '<div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required><label class="lifetime-choice">',
+        '<div class="field"><label>วันหมดอายุ</label><input id="fExpiry" class="input" type="date" required><div class="days-input-row"><span>ใช้ได้กี่วัน</span><input id="fDays" class="input days-input" type="number" min="0" max="3650" step="1" inputmode="numeric" placeholder="เช่น 30"><span>วัน</span></div><div class="field-help">พิมพ์จำนวนวัน แล้วระบบจะคำนวณวันหมดอายุให้อัตโนมัติ</div><label class="lifetime-choice">'
+      );
     }
 
-    const extraStyle='<style>[data-renew-license]{display:none!important}.days-input-row{display:grid;grid-template-columns:auto minmax(90px,150px) auto;align-items:center;gap:8px;margin-top:9px}.days-input-row span{font-size:12px;color:#b9c4d4}.days-input{min-height:38px!important}.license-url-pair{flex:1;min-width:520px;max-width:920px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}.url-display-card{min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:12px;background:#0e1827}.webrequest-label{font-size:10px;font-weight:800;color:#91a0b6;margin-bottom:5px}.url-display-controls{display:grid;grid-template-columns:minmax(120px,1fr) auto;gap:6px;align-items:center}.url-display-controls .input{min-height:34px;padding:6px 9px;font-size:12px;cursor:default}.webrequest-msg{font-size:10px;color:var(--muted);min-height:12px;margin-top:4px}.url-settings-holder{grid-column:1/-1}.url-settings-panel{width:auto}.url-settings-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.url-history-row{border:1px solid var(--line);background:#0f1928;border-radius:11px;padding:11px;display:flex;align-items:center;justify-content:space-between;gap:10px}.url-history-row.current{border-color:#275d43}.url-history-main{min-width:0;flex:1}.url-history-main code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dce7f5}.login-password-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.login-password-wrap .input{min-width:0}.login-show-btn{min-width:64px;min-height:42px}.login-remember-block{margin-top:2px}.login-remember{display:flex;align-items:center;gap:7px;font-size:12px;color:#dce7f5;cursor:pointer}.login-remember input{width:16px;height:16px}.login-remember-note{font-size:10px;line-height:1.35;color:#91a0b6;margin:4px 0 2px 23px}@media(max-width:1250px){#view-licenses .toolbar{align-items:flex-start;flex-wrap:wrap}.license-url-pair{order:3;flex-basis:100%;max-width:none;min-width:0}.toolbar-right{margin-left:auto}}@media(max-width:760px){.days-input-row{grid-template-columns:auto 1fr auto}.license-url-pair{grid-template-columns:1fr}.url-display-controls{grid-template-columns:1fr auto}.url-settings-controls{grid-template-columns:1fr}.url-settings-controls .btn{width:100%}.url-history-row{align-items:flex-start;flex-direction:column}.url-history-main code{white-space:normal;word-break:break-all}}</style>';
+    const extraStyle='<style>[data-renew-license]{display:none!important}.days-input-row{display:grid;grid-template-columns:auto minmax(90px,150px) auto;align-items:center;gap:8px;margin-top:9px}.days-input-row span{font-size:12px;color:#b9c4d4}.days-input{min-height:38px!important}.license-url-pair{flex:1;min-width:760px;max-width:1180px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.url-display-card{min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:12px;background:#0e1827}.webrequest-label{font-size:10px;font-weight:800;color:#91a0b6;margin-bottom:5px}.url-display-controls{display:grid;grid-template-columns:minmax(120px,1fr) auto;gap:6px;align-items:center}.url-display-controls .input{min-height:34px;padding:6px 9px;font-size:12px;cursor:default}.webrequest-msg{font-size:10px;color:var(--muted);min-height:12px;margin-top:4px}.url-settings-holder{grid-column:1/-1}.url-settings-panel{width:auto}.url-settings-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.url-history-row{border:1px solid var(--line);background:#0f1928;border-radius:11px;padding:11px;display:flex;align-items:center;justify-content:space-between;gap:10px}.url-history-row.current{border-color:#275d43}.url-history-main{min-width:0;flex:1}.url-history-main code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dce7f5}.login-password-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.login-password-wrap .input{min-width:0}.login-show-btn{min-width:64px;min-height:42px}.login-remember-block{margin-top:2px}.login-remember{display:flex;align-items:center;gap:7px;font-size:12px;color:#dce7f5;cursor:pointer}.login-remember input{width:16px;height:16px}.login-remember-note{font-size:10px;line-height:1.35;color:#91a0b6;margin:4px 0 2px 23px}@media(max-width:1450px){#view-licenses .toolbar{align-items:flex-start;flex-wrap:wrap}.license-url-pair{order:3;flex-basis:100%;max-width:none;min-width:0}.toolbar-right{margin-left:auto}}@media(max-width:980px){.license-url-pair{grid-template-columns:1fr}}@media(max-width:760px){.days-input-row{grid-template-columns:auto 1fr auto}.license-url-pair{grid-template-columns:1fr}.url-display-controls{grid-template-columns:1fr auto}.url-settings-controls{grid-template-columns:1fr}.url-settings-controls .btn{width:100%}.url-history-row{align-items:flex-start;flex-direction:column}.url-history-main code{white-space:normal;word-break:break-all}}</style>';
     html=html.replace('</head>',extraStyle+'</head>');
+
     const patch='<script>('+standard4Patch.toString()+')();<\/script>';
     html=html.replace('</body>',patch+'</body>');
 
-    document.open();document.write(html);document.close();
-  }catch(e){document.body.innerHTML='<div class="loading"><div class="card">เปิด Dashboard ไม่สำเร็จ กรุณาลองใหม่</div></div>'}
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(e){
+    document.body.innerHTML='<div class="loading"><div class="card">เปิด Dashboard ไม่สำเร็จ กรุณาลองใหม่</div></div>';
+  }
 })();
 </script></body></html>
