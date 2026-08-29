@@ -8,9 +8,9 @@
     {"source":"/well/","destination":"/license.html"},
     {"source":"/well3","destination":"/well3/index.html"},
     {"source":"/well3/","destination":"/well3/index.html"},
-    {"source":"/well4","destination":"/well3/index.html"},
-    {"source":"/well4/","destination":"/well3/index.html"},
-    {"source":"/well5","destination":"/well3/index.html"},
-    {"source":"/well5/","destination":"/well3/index.html"}
+    {"source":"/well4","destination":"/standard5/index.html"},
+    {"source":"/well4/","destination":"/standard5/index.html"},
+    {"source":"/well5","destination":"/standard5/index.html"},
+    {"source":"/well5/","destination":"/standard5/index.html"}
   ]
 }
