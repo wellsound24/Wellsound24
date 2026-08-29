@@ -11,6 +11,10 @@
     {"source":"/well4","destination":"/standard5/index.html"},
     {"source":"/well4/","destination":"/standard5/index.html"},
     {"source":"/well5","destination":"/standard5/index.html"},
-    {"source":"/well5/","destination":"/standard5/index.html"}
+    {"source":"/well5/","destination":"/standard5/index.html"},
+    {"source":"/well6","destination":"/standard5/index.html"},
+    {"source":"/well6/","destination":"/standard5/index.html"},
+    {"source":"/install","destination":"/install/index.html"},
+    {"source":"/install/","destination":"/install/index.html"}
   ]
 }
