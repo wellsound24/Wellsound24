@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Well License Dashboard Standard 5</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d14}
+#loading{position:fixed;inset:0;display:grid;place-items:center;color:#fff;font:14px system-ui,sans-serif;background:#080d14;z-index:2}
+#dash{display:block;width:100%;height:100dvh;border:0;background:#080d14}
+</style>
+</head>
+<body>
+<div id="loading">กำลังเปิด Well License Dashboard...</div>
+<iframe id="dash" src="/well3" title="Well License Dashboard Standard 5"></iframe>
+<script>
+(()=>{
+  const frame=document.getElementById('dash');
+  const loading=document.getElementById('loading');
+  let doc=null,win=null,observer=null,lastRows=null;
+  const ONLINE_MS=8*60*1000, WAITING_MS=15*60*1000;
+
+  function licenseState(x){
+    const today=new Date().toISOString().slice(0,10);
+    if(!String(x.expires_at||'').startsWith('9999')&&String(x.expires_at||'')<today)return['Expired','bad'];
+    if(!x.enabled)return['Disabled','bad'];
+    if(x.ib_status==='pending')return['IB Pending','warn'];
+    if(x.ib_status==='rejected')return['Blocked','warn'];
+    return['Active','good'];
+  }
+  function connState(x){
+    if(!x.last_check_at)return['Offline','offline'];
+    const age=Math.max(0,Date.now()-new Date(x.last_check_at).getTime());
+    if(age<=ONLINE_MS)return['Online','online'];
+    if(age<=WAITING_MS)return['รอตรวจสอบ','waiting'];
+    return['Offline','offline'];
+  }
+  function relative(iso){
+    if(!iso)return'ยังไม่เคยเชื่อมต่อ';
+    const m=Math.floor(Math.max(0,Date.now()-new Date(iso).getTime())/60000);
+    if(m<1)return'เมื่อสักครู่';
+    if(m<60)return m+' นาทีที่แล้ว';
+    const h=Math.floor(m/60);
+    if(h<24)return h+' ชม.ที่แล้ว';
+    return new Date(iso).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'});
+  }
+  function injectStyle(){
+    if(!doc||doc.getElementById('standard5LiveStyle'))return;
+    const s=doc.createElement('style');s.id='standard5LiveStyle';s.textContent=`
+      #licenseRows td:nth-child(7){min-width:128px}
+      .s5-live{line-height:1.2;min-width:120px}
+      .s5-conn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800}
+      .s5-dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:#7c8798}
+      .s5-conn.online{color:#45d69a}.s5-conn.online .s5-dot{background:#45d69a;box-shadow:0 0 0 3px rgba(69,214,154,.12)}
+      .s5-conn.waiting{color:#f2bc55}.s5-conn.waiting .s5-dot{background:#f2bc55}
+      .s5-conn.offline{color:#ff7777}.s5-conn.offline .s5-dot{background:#ff7777}
+      .s5-license{font-size:10px;color:#9aa8bc;margin-top:3px}.s5-license .good{color:#45d69a}.s5-license .warn{color:#f2bc55}.s5-license .bad{color:#ff7777}
+      .s5-last{font-size:9px;color:#7f8da3;margin-top:2px;white-space:nowrap}
+    `;doc.head.appendChild(s);
+  }
+  async function getLicenses(){
+    if(!win)return[];
+    const token=win.sessionStorage.getItem('well_admin_session')||'';
+    if(!token)return[];
+    try{
+      const r=await win.fetch('/api/core',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({action:'list',include_archived:true})});
+      const j=await r.json();
+      return r.ok&&j.ok&&Array.isArray(j.licenses)?j.licenses:[];
+    }catch{return[]}
+  }
+  async function paint(){
+    if(!doc)return;
+    injectStyle();
+    const licenses=await getLicenses();
+    if(!licenses.length)return;
+    const byId=new Map(licenses.map(x=>[String(x.id),x]));
+    doc.querySelectorAll('#licenseRows tr').forEach(row=>{
+      const edit=row.querySelector('[data-edit-license]');
+      if(!edit)return;
+      const x=byId.get(String(edit.dataset.editLicense));
+      const cell=row.children[6];
+      if(!x||!cell)return;
+      const [conn,cc]=connState(x),[lic,lc]=licenseState(x),last=relative(x.last_check_at);
+      const stamp=conn+'|'+lic+'|'+last;
+      if(cell.dataset.s5stamp===stamp)return;
+      cell.dataset.s5stamp=stamp;
+      cell.innerHTML='<div class="s5-live"><div class="s5-conn '+cc+'"><span class="s5-dot"></span>'+conn+'</div><div class="s5-license">License: <span class="'+lc+'">'+lic+'</span></div><div class="s5-last">ล่าสุด: '+last+'</div></div>';
+    });
+  }
+  function watchRows(){
+    if(!doc)return;
+    const rows=doc.getElementById('licenseRows');
+    if(!rows||rows===lastRows)return;
+    if(observer)observer.disconnect();
+    lastRows=rows;
+    observer=new MutationObserver(()=>setTimeout(paint,30));
+    observer.observe(rows,{childList:true});
+    paint();
+  }
+  function attach(){
+    try{win=frame.contentWindow;doc=frame.contentDocument||win.document}catch{return}
+    if(!doc)return;
+    loading.style.display='none';
+    watchRows();
+    setInterval(()=>{watchRows();paint()},30000);
+    setInterval(paint,60000);
+  }
+  frame.addEventListener('load',()=>setTimeout(attach,500));
+})();
+</script>
+</body>
+</html>
