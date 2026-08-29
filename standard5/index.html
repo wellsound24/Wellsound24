@@ -2,8 +2,15 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Well License Dashboard Standard 5</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080d14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Well License">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon-192.svg">
+<link rel="apple-touch-icon" href="/icon-192.svg">
+<title>Well License Dashboard Standard 6</title>
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d14}
 #loading{position:fixed;inset:0;display:grid;place-items:center;color:#fff;font:14px system-ui,sans-serif;background:#080d14;z-index:2}
@@ -12,8 +19,9 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d14}
 </head>
 <body>
 <div id="loading">กำลังเปิด Well License Dashboard...</div>
-<iframe id="dash" src="/well3" title="Well License Dashboard Standard 5"></iframe>
+<iframe id="dash" src="/well3" title="Well License Dashboard Standard 6"></iframe>
 <script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{})}
 (()=>{
   const frame=document.getElementById('dash');
   const loading=document.getElementById('loading');
@@ -45,8 +53,8 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d14}
     return new Date(iso).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'});
   }
   function injectStyle(){
-    if(!doc||doc.getElementById('standard5LiveStyle'))return;
-    const s=doc.createElement('style');s.id='standard5LiveStyle';s.textContent=`
+    if(!doc||doc.getElementById('standard6LiveStyle'))return;
+    const s=doc.createElement('style');s.id='standard6LiveStyle';s.textContent=`
       #licenseRows td:nth-child(7){min-width:128px}
       .s5-live{line-height:1.2;min-width:120px}
       .s5-conn{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:800}
