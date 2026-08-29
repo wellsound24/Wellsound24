@@ -1,44 +1,16 @@
 {
   "rewrites": [
-    {
-      "source": "/admin",
-      "destination": "/admin.html"
-    },
-    {
-      "source": "/admin/",
-      "destination": "/admin.html"
-    },
-    {
-      "source": "/license",
-      "destination": "/license.html"
-    },
-    {
-      "source": "/license/",
-      "destination": "/license.html"
-    },
-    {
-      "source": "/well",
-      "destination": "/license.html"
-    },
-    {
-      "source": "/well/",
-      "destination": "/license.html"
-    },
-    {
-      "source": "/well3",
-      "destination": "/well3/index.html"
-    },
-    {
-      "source": "/well3/",
-      "destination": "/well3/index.html"
-    },
-    {
-      "source": "/well4",
-      "destination": "/well3/index.html"
-    },
-    {
-      "source": "/well4/",
-      "destination": "/well3/index.html"
-    }
+    {"source":"/admin","destination":"/admin.html"},
+    {"source":"/admin/","destination":"/admin.html"},
+    {"source":"/license","destination":"/license.html"},
+    {"source":"/license/","destination":"/license.html"},
+    {"source":"/well","destination":"/license.html"},
+    {"source":"/well/","destination":"/license.html"},
+    {"source":"/well3","destination":"/well3/index.html"},
+    {"source":"/well3/","destination":"/well3/index.html"},
+    {"source":"/well4","destination":"/well3/index.html"},
+    {"source":"/well4/","destination":"/well3/index.html"},
+    {"source":"/well5","destination":"/well3/index.html"},
+    {"source":"/well5/","destination":"/well3/index.html"}
   ]
 }
