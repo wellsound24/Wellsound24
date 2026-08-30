@@ -27,7 +27,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
   const loading=document.getElementById('loading');
   const DELETE_API='https://sjcxywxixgrpdgeqaepk.supabase.co/functions/v1/admin-customer-delete';
   let doc=null,win=null,observer=null,lastRows=null,customerObserver=null,lastCustomerRows=null;
-  let currentCustomerId=null,customerCache=[];
+  let currentLicenseId=null,customerCache=[],licenseCache=[];
   const ONLINE_MS=8*60*1000, WAITING_MS=15*60*1000;
 
   function licenseState(x){
@@ -72,23 +72,24 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
     `;doc.head.appendChild(s);
   }
   async function getLicenses(){
-    if(!win)return[];
+    if(!win)return licenseCache;
     const token=win.sessionStorage.getItem('well_admin_session')||'';
-    if(!token)return[];
+    if(!token)return licenseCache;
     try{
       const r=await win.fetch('/api/core',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({action:'list',include_archived:true})});
       const j=await r.json();
-      return r.ok&&j.ok&&Array.isArray(j.licenses)?j.licenses:[];
-    }catch{return[]}
+      licenseCache=r.ok&&j.ok&&Array.isArray(j.licenses)?j.licenses:licenseCache;
+      return licenseCache;
+    }catch{return licenseCache}
   }
   async function getCustomers(){
-    if(!win)return[];
+    if(!win)return customerCache;
     const token=win.sessionStorage.getItem('well_admin_session')||'';
-    if(!token)return[];
+    if(!token)return customerCache;
     try{
       const r=await win.fetch('/api/next',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({action:'customers'})});
       const j=await r.json();
-      customerCache=r.ok&&j.ok&&Array.isArray(j.customers)?j.customers:[];
+      customerCache=r.ok&&j.ok&&Array.isArray(j.customers)?j.customers:customerCache;
       return customerCache;
     }catch{return customerCache}
   }
@@ -131,35 +132,44 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
       line.appendChild(btn);
     });
   }
-  function ensureDeleteButton(){
+  function ensureLicenseDeleteButton(){
     if(!doc)return;
-    const footer=doc.querySelector('#customerModal .modal-foot');
+    const footer=doc.querySelector('#licenseModal .modal-foot');
     if(!footer)return;
     let btn=doc.getElementById('s6DeleteCustomerBtn');
     if(!btn){
       btn=doc.createElement('button');btn.id='s6DeleteCustomerBtn';btn.type='button';btn.className='btn danger s6-delete-customer';btn.textContent='ลบบัญชีลูกค้า';
       footer.insertBefore(btn,footer.firstChild);
-      btn.addEventListener('click',deleteCurrentCustomer);
+      btn.addEventListener('click',deleteCustomerFromLicense);
     }
-    const title=(doc.getElementById('customerModalTitle')?.textContent||'');
-    btn.style.display=(currentCustomerId&&title.includes('แก้ไข'))?'':'none';
+    const title=(doc.getElementById('licenseModalTitle')?.textContent||'');
+    const lic=licenseCache.find(x=>String(x.id)===String(currentLicenseId));
+    btn.style.display=(currentLicenseId&&title.includes('แก้ไข')&&lic?.customer_id)?'':'none';
   }
-  async function deleteCurrentCustomer(){
-    if(!currentCustomerId||!win)return;
-    const c=customerCache.find(x=>String(x.id)===String(currentCustomerId));
-    const name=c?.name||'ลูกค้ารายนี้';
-    if(!confirm('ยืนยันลบบัญชีลูกค้า "'+name+'" ?\n\nระบบจะลบเฉพาะ Customer Profile\nLicense และ License Key เดิมจะไม่ถูกลบ'))return;
+  async function deleteCustomerFromLicense(){
+    if(!currentLicenseId||!win)return;
+    await Promise.all([getLicenses(),getCustomers()]);
+    const lic=licenseCache.find(x=>String(x.id)===String(currentLicenseId));
+    const customerId=lic?.customer_id;
+    if(!customerId){
+      if(typeof win.toast==='function')win.toast('License นี้ไม่ได้ผูกกับบัญชีลูกค้า','bad');
+      else alert('License นี้ไม่ได้ผูกกับบัญชีลูกค้า');
+      return;
+    }
+    const c=customerCache.find(x=>String(x.id)===String(customerId));
+    const name=c?.name||lic?.customer_name||'ลูกค้ารายนี้';
+    if(!confirm('ยืนยันลบบัญชีลูกค้า "'+name+'" ?\n\nระบบจะลบเฉพาะ Customer Profile\nLicense และ License Key เดิมจะไม่ถูกลบ\nถ้ามีหลาย License ที่ผูกกับลูกค้านี้ จะถูกถอดการผูก Customer Profile ทั้งหมด'))return;
     const token=win.sessionStorage.getItem('well_admin_session')||'';
     if(!token){alert('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');return}
     try{
-      const r=await fetch(DELETE_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({id:currentCustomerId})});
+      const r=await fetch(DELETE_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({id:customerId})});
       const j=await r.json().catch(()=>({ok:false,error:'server_error'}));
       if(!r.ok||!j.ok)throw new Error(j.error||'server_error');
-      currentCustomerId=null;
-      doc.getElementById('customerModal')?.classList.remove('open');
+      currentLicenseId=null;
+      doc.getElementById('licenseModal')?.classList.remove('open');
       if(typeof win.toast==='function')win.toast('ลบบัญชีลูกค้าแล้ว');
       if(typeof win.loadAll==='function')await win.loadAll(); else win.location.reload();
-      await paintCustomerEmails();
+      await Promise.all([paint(),paintCustomerEmails()]);
     }catch(e){
       if(typeof win.toast==='function')win.toast('ลบบัญชีไม่สำเร็จ: '+(e.message||'server_error'),'bad');
       else alert('ลบบัญชีไม่สำเร็จ');
@@ -171,20 +181,20 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
     }
     if(win&&typeof win.toast==='function')win.toast('คัดลอก Email แล้ว');
   }
-  function wireCustomerTools(){
-    if(!doc||doc.documentElement.dataset.s6CustomerTools==='1')return;
-    doc.documentElement.dataset.s6CustomerTools='1';
+  function wireTools(){
+    if(!doc||doc.documentElement.dataset.s6Tools==='1')return;
+    doc.documentElement.dataset.s6Tools='1';
     doc.addEventListener('click',e=>{
-      const edit=e.target.closest?.('[data-edit-customer]');
-      if(edit){currentCustomerId=edit.dataset.editCustomer;setTimeout(ensureDeleteButton,0)}
-      const add=e.target.closest?.('#addCustomerBtn,[data-quick="addCustomer"]');
-      if(add){currentCustomerId=null;setTimeout(ensureDeleteButton,0)}
+      const editLicense=e.target.closest?.('[data-edit-license]');
+      if(editLicense){currentLicenseId=editLicense.dataset.editLicense;setTimeout(ensureLicenseDeleteButton,0)}
+      const addLicense=e.target.closest?.('#addLicenseBtn,[data-quick="addLicense"]');
+      if(addLicense){currentLicenseId=null;setTimeout(ensureLicenseDeleteButton,0)}
       const cp=e.target.closest?.('[data-s6-copy-email]');
       if(cp){e.preventDefault();copyEmail(cp.dataset.s6CopyEmail)}
     },true);
-    const modal=doc.getElementById('customerModal');
-    if(modal)new MutationObserver(()=>ensureDeleteButton()).observe(modal,{attributes:true,attributeFilter:['class']});
-    ensureDeleteButton();
+    const modal=doc.getElementById('licenseModal');
+    if(modal)new MutationObserver(()=>ensureLicenseDeleteButton()).observe(modal,{attributes:true,attributeFilter:['class']});
+    ensureLicenseDeleteButton();
   }
   function watchRows(){
     if(!doc)return;
@@ -192,7 +202,7 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
     if(!rows||rows===lastRows)return;
     if(observer)observer.disconnect();
     lastRows=rows;
-    observer=new MutationObserver(()=>setTimeout(paint,30));
+    observer=new MutationObserver(()=>setTimeout(()=>{paint();ensureLicenseDeleteButton()},30));
     observer.observe(rows,{childList:true});
     paint();
   }
@@ -210,9 +220,10 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
     try{win=frame.contentWindow;doc=frame.contentDocument||win.document}catch{return}
     if(!doc)return;
     loading.style.display='none';
-    injectStyle();wireCustomerTools();watchRows();watchCustomerRows();
+    injectStyle();wireTools();watchRows();watchCustomerRows();
+    Promise.all([getLicenses(),getCustomers()]).then(()=>ensureLicenseDeleteButton());
     setInterval(()=>{watchRows();watchCustomerRows();paint()},30000);
-    setInterval(()=>{paint();paintCustomerEmails();ensureDeleteButton()},60000);
+    setInterval(()=>{paint();paintCustomerEmails();ensureLicenseDeleteButton()},60000);
   }
   frame.addEventListener('load',()=>setTimeout(attach,500));
 })();
