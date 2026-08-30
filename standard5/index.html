@@ -25,7 +25,9 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
 (()=>{
   const frame=document.getElementById('dash');
   const loading=document.getElementById('loading');
-  let doc=null,win=null,observer=null,lastRows=null;
+  const DELETE_API='https://sjcxywxixgrpdgeqaepk.supabase.co/functions/v1/admin-customer-delete';
+  let doc=null,win=null,observer=null,lastRows=null,customerObserver=null,lastCustomerRows=null;
+  let currentCustomerId=null,customerCache=[];
   const ONLINE_MS=8*60*1000, WAITING_MS=15*60*1000;
 
   function licenseState(x){
@@ -64,6 +66,9 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
       .s5-conn.offline{color:#ff7777}.s5-conn.offline .s5-dot{background:#ff7777}
       .s5-license{font-size:10px;color:#9aa8bc;margin-top:3px}.s5-license .good{color:#45d69a}.s5-license .warn{color:#f2bc55}.s5-license .bad{color:#ff7777}
       .s5-last{font-size:9px;color:#7f8da3;margin-top:2px;white-space:nowrap}
+      .s6-email-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+      .s6-copy-email{padding:3px 7px!important;min-height:24px!important;font-size:10px!important;white-space:nowrap}
+      .s6-delete-customer{margin-right:auto!important;background:#4b1f27!important;border-color:#8b3644!important;color:#ffd9df!important}
     `;doc.head.appendChild(s);
   }
   async function getLicenses(){
@@ -75,6 +80,17 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
       const j=await r.json();
       return r.ok&&j.ok&&Array.isArray(j.licenses)?j.licenses:[];
     }catch{return[]}
+  }
+  async function getCustomers(){
+    if(!win)return[];
+    const token=win.sessionStorage.getItem('well_admin_session')||'';
+    if(!token)return[];
+    try{
+      const r=await win.fetch('/api/next',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({action:'customers'})});
+      const j=await r.json();
+      customerCache=r.ok&&j.ok&&Array.isArray(j.customers)?j.customers:[];
+      return customerCache;
+    }catch{return customerCache}
   }
   async function paint(){
     if(!doc)return;
@@ -95,6 +111,81 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
       cell.innerHTML='<div class="s5-live"><div class="s5-conn '+cc+'"><span class="s5-dot"></span>'+conn+'</div><div class="s5-license">License: <span class="'+lc+'">'+lic+'</span></div><div class="s5-last">ล่าสุด: '+last+'</div></div>';
     });
   }
+  async function paintCustomerEmails(){
+    if(!doc)return;
+    injectStyle();
+    const customers=await getCustomers();
+    const byId=new Map(customers.map(c=>[String(c.id),c]));
+    doc.querySelectorAll('#customerRows tr').forEach(row=>{
+      const edit=row.querySelector('[data-edit-customer]');
+      if(!edit)return;
+      const c=byId.get(String(edit.dataset.editCustomer));
+      const cell=row.children[2];
+      if(!c||!cell||!c.email)return;
+      const line=cell.querySelector('.subline');
+      if(!line||line.querySelector('[data-s6-copy-email]'))return;
+      line.classList.add('s6-email-line');
+      const btn=doc.createElement('button');
+      btn.type='button';btn.className='btn soft small s6-copy-email';btn.textContent='Copy Email';
+      btn.dataset.s6CopyEmail=c.email;
+      line.appendChild(btn);
+    });
+  }
+  function ensureDeleteButton(){
+    if(!doc)return;
+    const footer=doc.querySelector('#customerModal .modal-foot');
+    if(!footer)return;
+    let btn=doc.getElementById('s6DeleteCustomerBtn');
+    if(!btn){
+      btn=doc.createElement('button');btn.id='s6DeleteCustomerBtn';btn.type='button';btn.className='btn danger s6-delete-customer';btn.textContent='ลบบัญชีลูกค้า';
+      footer.insertBefore(btn,footer.firstChild);
+      btn.addEventListener('click',deleteCurrentCustomer);
+    }
+    const title=(doc.getElementById('customerModalTitle')?.textContent||'');
+    btn.style.display=(currentCustomerId&&title.includes('แก้ไข'))?'':'none';
+  }
+  async function deleteCurrentCustomer(){
+    if(!currentCustomerId||!win)return;
+    const c=customerCache.find(x=>String(x.id)===String(currentCustomerId));
+    const name=c?.name||'ลูกค้ารายนี้';
+    if(!confirm('ยืนยันลบบัญชีลูกค้า "'+name+'" ?\n\nระบบจะลบเฉพาะ Customer Profile\nLicense และ License Key เดิมจะไม่ถูกลบ'))return;
+    const token=win.sessionStorage.getItem('well_admin_session')||'';
+    if(!token){alert('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');return}
+    try{
+      const r=await fetch(DELETE_API,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({id:currentCustomerId})});
+      const j=await r.json().catch(()=>({ok:false,error:'server_error'}));
+      if(!r.ok||!j.ok)throw new Error(j.error||'server_error');
+      currentCustomerId=null;
+      doc.getElementById('customerModal')?.classList.remove('open');
+      if(typeof win.toast==='function')win.toast('ลบบัญชีลูกค้าแล้ว');
+      if(typeof win.loadAll==='function')await win.loadAll(); else win.location.reload();
+      await paintCustomerEmails();
+    }catch(e){
+      if(typeof win.toast==='function')win.toast('ลบบัญชีไม่สำเร็จ: '+(e.message||'server_error'),'bad');
+      else alert('ลบบัญชีไม่สำเร็จ');
+    }
+  }
+  async function copyEmail(email){
+    try{await navigator.clipboard.writeText(email)}catch{
+      const ta=document.createElement('textarea');ta.value=email;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();
+    }
+    if(win&&typeof win.toast==='function')win.toast('คัดลอก Email แล้ว');
+  }
+  function wireCustomerTools(){
+    if(!doc||doc.documentElement.dataset.s6CustomerTools==='1')return;
+    doc.documentElement.dataset.s6CustomerTools='1';
+    doc.addEventListener('click',e=>{
+      const edit=e.target.closest?.('[data-edit-customer]');
+      if(edit){currentCustomerId=edit.dataset.editCustomer;setTimeout(ensureDeleteButton,0)}
+      const add=e.target.closest?.('#addCustomerBtn,[data-quick="addCustomer"]');
+      if(add){currentCustomerId=null;setTimeout(ensureDeleteButton,0)}
+      const cp=e.target.closest?.('[data-s6-copy-email]');
+      if(cp){e.preventDefault();copyEmail(cp.dataset.s6CopyEmail)}
+    },true);
+    const modal=doc.getElementById('customerModal');
+    if(modal)new MutationObserver(()=>ensureDeleteButton()).observe(modal,{attributes:true,attributeFilter:['class']});
+    ensureDeleteButton();
+  }
   function watchRows(){
     if(!doc)return;
     const rows=doc.getElementById('licenseRows');
@@ -105,13 +196,23 @@ if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js',{scop
     observer.observe(rows,{childList:true});
     paint();
   }
+  function watchCustomerRows(){
+    if(!doc)return;
+    const rows=doc.getElementById('customerRows');
+    if(!rows||rows===lastCustomerRows)return;
+    if(customerObserver)customerObserver.disconnect();
+    lastCustomerRows=rows;
+    customerObserver=new MutationObserver(()=>setTimeout(paintCustomerEmails,30));
+    customerObserver.observe(rows,{childList:true});
+    paintCustomerEmails();
+  }
   function attach(){
     try{win=frame.contentWindow;doc=frame.contentDocument||win.document}catch{return}
     if(!doc)return;
     loading.style.display='none';
-    watchRows();
-    setInterval(()=>{watchRows();paint()},30000);
-    setInterval(paint,60000);
+    injectStyle();wireCustomerTools();watchRows();watchCustomerRows();
+    setInterval(()=>{watchRows();watchCustomerRows();paint()},30000);
+    setInterval(()=>{paint();paintCustomerEmails();ensureDeleteButton()},60000);
   }
   frame.addEventListener('load',()=>setTimeout(attach,500));
 })();
