@@ -1,0 +1,49 @@
+name: Build WELL RF Scanner APK
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'well-rf-scanner-v7-clean/**'
+      - '.github/workflows/well-rf-scanner-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-v7-stable-ui-usb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build v7 stable APK
+        working-directory: well-rf-scanner-v7-clean
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Verify APK archive
+        run: unzip -t well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Save stable APK
+        run: |
+          mkdir -p build-artifacts/v7-stable
+          cp well-rf-scanner-v7-clean/app/build/outputs/apk/debug/app-debug.apk build-artifacts/v7-stable/WELL_RF_Scanner_Pro_v7_Stable_UI_USB.apk
+
+      - name: Upload stable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WELL_RF_Scanner_Pro_v7_Stable_UI_USB
+          path: build-artifacts/v7-stable/WELL_RF_Scanner_Pro_v7_Stable_UI_USB.apk
+          if-no-files-found: error
