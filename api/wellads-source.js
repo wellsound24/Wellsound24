@@ -27,7 +27,8 @@ export default async function handler(req,res){
     const r=await fetchWithCookies(SOURCE);
     if(!r.ok) throw new Error('โหลด UI เดิมไม่สำเร็จ: '+r.status);
     const html=await r.text();
-    if(!html || html.length<1000 || !html.includes('DecompressionStream')) throw new Error('ต้นทางที่ได้ไม่ใช่โปรแกรมเดิม');
+    if(!html || html.length<1000) throw new Error('ไฟล์โปรแกรมต้นทางไม่สมบูรณ์');
+    if(/Log in to Vercel|Protected Deployment|vercel.com\/sso-api/i.test(html)) throw new Error('ต้นทางยังติด Vercel Login');
     res.setHeader('Content-Type','text/html; charset=utf-8');
     res.setHeader('Cache-Control','public, max-age=0, s-maxage=31536000, stale-while-revalidate=86400');
     return res.status(200).send(html);
