@@ -17,6 +17,7 @@
     {"source":"/install","destination":"/install/index.html"},
     {"source":"/install/","destination":"/install/index.html"},
     {"source":"/reset-admin","destination":"/reset-admin.html"},
-    {"source":"/reset-admin/","destination":"/reset-admin.html"}
+    {"source":"/reset-admin/","destination":"/reset-admin.html"},
+    {"source":"/wellads-original","destination":"https://well-ads-108h1p8ec-wellsound25.vercel.app/?_vercel_share=ChyhB2WyOwIrzVbVViDRiMCHRhtYJPnR"}
   ]
 }
