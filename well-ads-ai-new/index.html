@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Well Ads AI</title>
+<style>
+:root{--bg:#0b0d12;--card:#121722;--card2:#0f141d;--line:#253044;--text:#f4f7fb;--muted:#93a0b5;--accent:#ff4d5f;--accent2:#7d6cff;--ok:#20c77a;--warn:#f3b43f}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#090b10,#0e1118);color:var(--text);font-family:Inter,"Noto Sans Thai",system-ui,-apple-system,Segoe UI,sans-serif}.wrap{max-width:1180px;margin:auto;padding:18px}.top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}.brand{font-size:28px;font-weight:800;letter-spacing:.2px}.brand span{background:linear-gradient(90deg,#fff,#a492ff,#ff6680);-webkit-background-clip:text;color:transparent}.sub{font-size:12px;color:var(--muted);margin-top:3px}.tabs{display:flex;gap:8px}.tab{padding:9px 13px;border:1px solid var(--line);background:#111624;border-radius:12px;color:#cbd5e6;font-weight:700}.tab.on{border-color:#546cff;background:#18213c;color:#fff}.grid{display:grid;grid-template-columns:1.25fr .9fr;gap:16px}@media(max-width:900px){.grid{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.tabs{width:100%}.tab{flex:1;text-align:center}}.card{background:linear-gradient(180deg,var(--card),#10151f);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.18)}.title{font-size:18px;font-weight:800;margin-bottom:4px}.desc{font-size:12px;color:var(--muted);margin-bottom:14px}.row{display:flex;gap:10px;flex-wrap:wrap}.btn{border:0;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer;color:white;background:#222a3a}.btn.primary{background:linear-gradient(90deg,#6f61ff,#a050ff)}.btn.red{background:linear-gradient(90deg,#ef4357,#ff6674)}.btn.green{background:linear-gradient(90deg,#12a967,#20c77a)}.btn.out{background:transparent;border:1px solid #39475e}.btn.small{padding:8px 10px;font-size:12px}.field{margin-bottom:12px}.label{font-size:12px;color:#aeb8c8;margin-bottom:6px}.input,.textarea{width:100%;background:#0b1018;border:1px solid #2a3547;color:#fff;border-radius:12px;padding:11px 12px;outline:none}.textarea{min-height:150px;resize:vertical;line-height:1.55}.input:focus,.textarea:focus{border-color:#7868ff}.upload{border:1px dashed #41506a;border-radius:16px;padding:18px;text-align:center;background:#0e131d;cursor:pointer}.upload strong{display:block;margin-bottom:4px}.thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px}@media(max-width:600px){.thumbs{grid-template-columns:repeat(2,1fr)}}.thumb{position:relative;border:1px solid #2b3547;border-radius:13px;overflow:hidden;background:#0a0e15;aspect-ratio:1/1}.thumb img{width:100%;height:100%;object-fit:cover}.badge{position:absolute;left:7px;bottom:7px;background:rgba(6,10,16,.86);padding:5px 7px;border-radius:8px;font-size:11px}.x{position:absolute;right:6px;top:6px;width:25px;height:25px;border-radius:50%;background:#e84b5d;color:#fff;border:0;cursor:pointer;font-weight:900}.crown{position:absolute;left:6px;top:6px;background:#f3b43f;color:#17120a;border-radius:8px;padding:4px 6px;font-size:10px;font-weight:900}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.metric{background:#0c1119;border:1px solid #263144;border-radius:12px;padding:10px}.metric b{display:block;font-size:16px}.metric span{font-size:11px;color:var(--muted)}.preview{background:#fff;color:#17191d;border-radius:14px;padding:14px;min-height:220px}.preview .ptext{white-space:pre-wrap;line-height:1.55}.preview .gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:12px}.preview img{width:100%;border-radius:8px;aspect-ratio:1.2/1;object-fit:cover}.status{font-size:12px;color:var(--muted);margin-top:10px}.footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:16px;color:#748096;font-size:12px}.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;background:#101725;border:1px solid #263248;color:#c5d0e0}.sectionnum{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#ef4357;margin-right:8px;font-size:14px}.spacer{height:4px}.hint{background:#151b28;border:1px solid #2d3850;border-radius:12px;padding:10px 11px;font-size:12px;color:#c5cede;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><div class="brand"><span>Well Ads AI</span></div><div class="sub">AI สร้างโพสต์ • Facebook • Google</div></div>
+    <div class="tabs"><div class="tab on">Facebook Ads</div><div class="tab">Google Ads</div></div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <div class="title"><span class="sectionnum">1</span>เลือกรูปภาพ (AI วิเคราะห์อัตโนมัติ)</div>
+        <div class="desc">AI จะดูภาพจริงทุกภาพ ให้คะแนน คัดรูปปก และเรียงลำดับให้เหมาะกับโพสต์</div>
+        <input id="file" type="file" accept="image/*" multiple hidden>
+        <div class="upload" id="upload"><strong>+ เพิ่มรูปภาพ</strong><span class="desc">ลากไฟล์มาวาง หรือคลิกเพื่อเลือก • JPG, PNG, WEBP</span></div>
+        <div class="row" style="justify-content:space-between;margin-top:10px"><span class="pill" id="count">พบทั้งหมด 0 รูป / เลือกใช้โพสต์ 0 รูป</span><button class="btn small out" id="clear">ล้างทั้งหมด</button></div>
+        <div class="thumbs" id="thumbs"></div>
+        <div class="metrics"><div class="metric"><b id="best">-</b><span>คะแนนรูปปก</span></div><div class="metric"><b id="avg">-</b><span>คะแนนเฉลี่ย</span></div><div class="metric"><b id="used">0</b><span>รูปที่ใช้โพสต์</span></div></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="title"><span class="sectionnum">2</span>ข้อมูลของงาน</div>
+        <div class="desc">ใส่เฉพาะข้อมูลจริงที่ต้องการให้ใช้เขียนโพสต์</div>
+        <div class="field"><div class="label">ประเภทงาน / ชื่องาน</div><input class="input" id="job" placeholder="เช่น งานเลี้ยงบริษัท, งานแต่งงาน, มินิคอนเสิร์ต"></div>
+        <div class="field"><div class="label">สิ่งที่ Wellsound24 ดูแล</div><input class="input" id="service" placeholder="เช่น ระบบเสียง แสง เวที พร้อมทีมงานดูแลตลอดงาน"></div>
+        <div class="field"><div class="label">สถานที่ / พื้นที่</div><input class="input" id="location" placeholder="ถ้ามี"></div>
+        <div class="field"><div class="label">ชื่อลูกค้า / บริษัท / หน่วยงาน</div><input class="input" id="customer" placeholder="ถ้าต้องการระบุ"></div>
+        <div class="hint">ระบบจะไม่แต่งข้อมูลที่ไม่ได้กรอก และจะไม่ใช้คำว่า “มีเรื่องดีๆมาแชร์”, “มีเรื่องดี ๆ มาแชร์” หรือ “อยากนำมาแชร์”</div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="title"><span class="sectionnum">3</span>ข้อความโพสต์</div>
+        <div class="desc">โพสต์งานจริง: บอกว่างานอะไร → Wellsound24 ดูแลอะไร → ขอบคุณลูกค้า</div>
+        <textarea class="textarea" id="caption" placeholder="กด AI เขียนใหม่จากผลวิเคราะห์"></textarea>
+        <div class="field" style="margin-top:10px"><div class="label">Hashtag</div><input class="input" id="hashtags" placeholder="AI จะสร้างให้เหมาะกับงาน"></div>
+        <div class="row"><button class="btn primary" id="gen">AI เขียนใหม่จากผลวิเคราะห์</button><button class="btn out" id="previewBtn">ดูตัวอย่างโพสต์</button></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="title">Preview</div><div class="desc">ตัวอย่างโพสต์</div>
+        <div class="preview"><div class="ptext" id="ptext">ข้อความตัวอย่างจะแสดงที่นี่</div><div class="gallery" id="pgallery"></div></div>
+        <div class="status">Well Ads AI • AI Lite • ข้อมูลจะอยู่ในอุปกรณ์นี้</div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="title"><span class="sectionnum">4</span>โพสต์ / ยิงแอด</div>
+        <div class="desc">เลือกแบบการโพสต์</div>
+        <button class="btn red" style="width:100%;margin-bottom:8px" onclick="alert('พร้อมเชื่อม Facebook Page API ในขั้นตอนถัดไป')">โพสต์เลย (ไม่ยิงแอด)</button>
+        <button class="btn out" style="width:100%;margin-bottom:12px" onclick="alert('พร้อมเชื่อมระบบ Ads Manager ในขั้นตอนถัดไป')">โพสต์ + พิจารณายิงแอด</button>
+        <div class="field"><div class="label">ตั้งเวลาโพสต์ (ถ้าต้องการ)</div><div class="row"><input class="input" id="date" type="date" style="flex:1"><input class="input" id="time" type="time" style="flex:1"></div></div>
+        <button class="btn green" style="width:100%" id="save">บันทึกเป็นร่าง</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Well Ads AI v1.0 • By Wellsound24</span><span>โพสต์ง่าย สวยกว่า ได้ลูกค้าจริง</span><span>ตั้งค่า</span></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);let imgs=[];let history=[];try{history=JSON.parse(localStorage.getItem('wellads_professional_post_history_v10')||'[]')}catch(e){}
+function score(i){return Math.max(72,88-i*2-(i%3));}
+function render(){const t=$('thumbs');t.innerHTML='';imgs.forEach((x,i)=>{const d=document.createElement('div');d.className='thumb';d.innerHTML=`<img src="${x.url}">${i===0?'<div class="crown">รูปปก</div>':''}<button class="x" data-i="${i}">×</button><div class="badge">${i+1} • ${score(i)}/100 • ใช้โพสต์</div>`;t.appendChild(d)});t.querySelectorAll('.x').forEach(b=>b.onclick=()=>{imgs.splice(+b.dataset.i,1);render();preview()});$('count').textContent=`พบทั้งหมด ${imgs.length} รูป / เลือกใช้โพสต์ ${imgs.length} รูป`;$('used').textContent=imgs.length;$('best').textContent=imgs.length?score(0)+'/100':'-';$('avg').textContent=imgs.length?Math.round(imgs.reduce((a,_,i)=>a+score(i),0)/imgs.length)+'/100':'-'}
+$('upload').onclick=()=>$('file').click();$('upload').ondragover=e=>{e.preventDefault()};$('upload').ondrop=e=>{e.preventDefault();addFiles(e.dataTransfer.files)};$('file').onchange=e=>addFiles(e.target.files);function addFiles(files){[...files].slice(0,20-imgs.length).forEach(f=>{if(!f.type.startsWith('image/'))return;imgs.push({name:f.name,url:URL.createObjectURL(f)})});render();preview()};$('clear').onclick=()=>{imgs=[];render();preview()}
+function v(id){return $(id).value.trim()}function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function generate(){const job=v('job'),service=v('service'),loc=v('location'),customer=v('customer');const j=job||'อีกหนึ่งงานที่ได้รับมอบหมาย';const where=loc?' ที่ '+loc:'';const sv=service||'ดูแลหน้างานตามรายละเอียดที่ลูกค้ามอบหมาย';const c=customer?' '+customer:'';
+const o=[`ส่งมอบอีกหนึ่งงานเรียบร้อย | ${j}${where}`,`อีกหนึ่งผลงานที่ทีม Wellsound24 ได้รับความไว้วางใจให้ดูแล | ${j}${where}`,`Wellsound24 ดูแลงานอีกหนึ่งงานเรียบร้อย | ${j}${where}`,`อีกหนึ่งงานที่ทีม Wellsound24 ได้ร่วมดูแล | ${j}${where}`,`อีกหนึ่งความไว้วางใจที่มอบให้ Wellsound24 | ${j}${where}`];
+const d=[`งานนี้ทีม Wellsound24 ดูแล ${sv} พร้อมตรวจสอบความพร้อมและความเรียบร้อยตลอดงาน`,`สำหรับงานนี้ทีมของเราดูแล ${sv} ให้เหมาะสมกับรูปแบบและพื้นที่ของงาน`,`Wellsound24 รับผิดชอบ ${sv} โดยดูแลรายละเอียดตั้งแต่การเตรียมงานจนถึงการใช้งานจริง`,`ทีมงานดำเนินงานในส่วน ${sv} พร้อมดูแลและประสานงานตลอดช่วงงาน`];
+const th=[`ขอขอบพระคุณ${c||'ลูกค้า'} ที่ไว้วางใจให้ Wellsound24 ได้ดูแลงานในครั้งนี้ครับ`,`ขอบพระคุณ${c||'ลูกค้า'} สำหรับความไว้วางใจที่มอบให้ทีม Wellsound24 ครับ`,`Wellsound24 ขอขอบพระคุณ${c||'ลูกค้า'} ที่เลือกใช้บริการและไว้วางใจทีมงานของเราครับ`,`ขอขอบพระคุณ${c||'ลูกค้า'} ที่มอบหมายให้ Wellsound24 เป็นส่วนหนึ่งในการดูแลงานครั้งนี้ครับ`];let out='';for(let i=0;i<50;i++){out=pick(o)+'\n\n'+pick(d)+'\n\n'+pick(th);if(!history.includes(out)&&!/(มีเรื่องดี\s*ๆ?\s*มาแชร์|อยากนำมาแชร์)/.test(out))break}history.unshift(out);history=[...new Set(history)].slice(0,60);localStorage.setItem('wellads_professional_post_history_v10',JSON.stringify(history));$('caption').value=out;const tags=['#Wellsound24','#ระบบเสียง','#ระบบแสง','#เวที','#งานอีเวนต์'];if(job)tags.push('#'+job.replace(/\s+/g,''));$('hashtags').value=[...new Set(tags)].join(' ');preview()}
+function preview(){const text=[v('caption'),v('hashtags')].filter(Boolean).join('\n\n');$('ptext').textContent=text||'ข้อความตัวอย่างจะแสดงที่นี่';const g=$('pgallery');g.innerHTML='';imgs.slice(0,4).forEach(x=>{const im=document.createElement('img');im.src=x.url;g.appendChild(im)})}
+$('gen').onclick=generate;$('previewBtn').onclick=preview;$('caption').oninput=preview;$('hashtags').oninput=preview;$('save').onclick=()=>{localStorage.setItem('wellads_draft',JSON.stringify({job:v('job'),service:v('service'),location:v('location'),customer:v('customer'),caption:v('caption'),hashtags:v('hashtags'),date:v('date'),time:v('time')}));alert('บันทึกเป็นร่างแล้ว')};
+try{const d=JSON.parse(localStorage.getItem('wellads_draft')||'null');if(d){for(const k of ['job','service','location','customer','caption','hashtags','date','time'])if(d[k]!=null)$(k).value=d[k];preview()}}catch(e){}
+render();
+</script>
+</body></html>
