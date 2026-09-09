@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Well Ads Gateway</title>
+<style>
+:root{--bg:#07111f;--panel:#0d1b2b;--panel2:#10243a;--line:#233c58;--text:#eef5ff;--muted:#91a7be;--ok:#1fc77a;--bad:#ff6b6b;--warn:#f2b84b;--accent:#2d8cff}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#07111f,#081523);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}.wrap{max-width:1180px;margin:auto;padding:22px}.top{display:flex;gap:14px;align-items:center;justify-content:space-between;margin-bottom:18px}.brand h1{font-size:25px;margin:0}.brand p{margin:3px 0 0;color:var(--muted)}.status{border:1px solid var(--line);background:var(--panel);padding:8px 12px;border-radius:999px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{background:rgba(13,27,43,.96);border:1px solid var(--line);border-radius:16px;padding:17px;box-shadow:0 12px 35px rgba(0,0,0,.2)}.card h2{font-size:17px;margin:0 0 14px}.full{grid-column:1/-1}label{display:block;color:#c9d8e8;font-size:13px;margin:11px 0 6px}input,textarea,select{width:100%;border:1px solid var(--line);border-radius:10px;background:#081522;color:var(--text);padding:11px 12px;outline:none}textarea{min-height:125px;resize:vertical}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}button{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--accent);color:white}button.alt{background:#17324f}button.danger{background:#6d2830}button:disabled{opacity:.5;cursor:not-allowed}.hint{font-size:12px;color:var(--muted);margin-top:7px}.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{background:#081522;border:1px solid var(--line);border-radius:12px;padding:12px}.stat b{font-size:23px;display:block}.stat span{font-size:12px;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}th{color:#aac0d5}.badge{display:inline-block;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800}.pending{background:#5d4916;color:#ffe59a}.sent{background:#123f2c;color:#85f0b7}.failed{background:#4a2026;color:#ffb3ba}.draft{background:#203a52;color:#bddbff}.toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}.empty{color:var(--muted);text-align:center;padding:25px}.toast{position:fixed;right:18px;bottom:18px;max-width:360px;background:#0b2033;border:1px solid var(--line);padding:12px 14px;border-radius:12px;display:none}.toast.show{display:block}.small{font-size:12px;color:var(--muted)}
+@media(max-width:800px){.grid,.row{grid-template-columns:1fr}.full{grid-column:auto}.statgrid{grid-template-columns:1fr 1fr}.top{align-items:flex-start;flex-direction:column}.wrap{padding:14px}table{display:block;overflow:auto;white-space:nowrap}}
+</style>
+</head>
+<body><div class="wrap">
+<div class="top"><div class="brand"><h1>Well Ads Gateway</h1><p>ตัวกลางรับโพสต์จาก Well Ads AI → ส่งต่อ Make / Zapier / Pipedream → Facebook</p></div><div class="status" id="apiStatus">กำลังตรวจ Gateway…</div></div>
+
+<div class="grid">
+<section class="card"><h2>1. ตั้งค่าปลายทาง</h2>
+<label>ผู้ให้บริการตัวกลาง</label><select id="provider"><option value="make">Make</option><option value="zapier">Zapier</option><option value="pipedream">Pipedream</option></select>
+<label>Webhook URL</label><input id="webhook" placeholder="วาง Webhook URL จากผู้ให้บริการ">
+<div class="hint">รองรับ HTTPS Webhook ของ Make, Zapier และ Pipedream เท่านั้น เพื่อความปลอดภัย</div>
+<div class="buttons"><button id="saveSettings">บันทึกการตั้งค่า</button><button class="alt" id="testWebhook">ทดสอบการเชื่อมต่อ</button></div>
+</section>
+
+<section class="card"><h2>2. สร้างรายการส่ง</h2>
+<label>ชื่อรายการ / งาน</label><input id="title" placeholder="เช่น งานเลี้ยงบริษัท ABC">
+<label>ข้อความโพสต์</label><textarea id="message" placeholder="ข้อความจาก Well Ads AI"></textarea>
+<div class="row"><div><label>URL รูปภาพ</label><input id="imageUrl" placeholder="https://..."></div><div><label>ลิงก์ปลายทาง</label><input id="linkUrl" placeholder="https://..."></div></div>
+<div class="row"><div><label>วันเวลาโพสต์</label><input id="scheduleAt" type="datetime-local"></div><div><label>โหมด</label><select id="mode"><option value="now">ส่งทันที</option><option value="schedule">ตั้งเวลา</option><option value="draft">บันทึกร่าง</option></select></div></div>
+<div class="buttons"><button id="createJob">สร้างรายการ</button><button class="alt" id="clearForm">ล้างข้อมูล</button></div>
+</section>
+
+<section class="card full"><h2>3. ภาพรวม</h2><div class="statgrid"><div class="stat"><b id="nAll">0</b><span>ทั้งหมด</span></div><div class="stat"><b id="nPending">0</b><span>รอส่ง</span></div><div class="stat"><b id="nSent">0</b><span>สำเร็จ</span></div><div class="stat"><b id="nFailed">0</b><span>ล้มเหลว</span></div></div></section>
+
+<section class="card full"><div class="toolbar"><h2 style="margin:0">4. คิวและประวัติ</h2><div class="buttons" style="margin:0"><button class="alt" id="runQueue">ประมวลผลคิวตอนนี้</button><button class="alt" id="exportData">Export</button><button class="danger" id="clearHistory">ล้างประวัติ</button></div></div>
+<div id="tableWrap"></div><div class="small">ระบบตรวจคิวทุก 30 วินาทีขณะเปิดหน้านี้อยู่ หากต้องการตั้งเวลาแบบ 24/7 จะต่อฐานข้อมูลและ Scheduler ภายหลังได้โดยไม่ต้องเปลี่ยน UI นี้</div></section>
+</div></div><div class="toast" id="toast"></div>
+<script>
+const API='/api/wellads-gateway';
+const $=id=>document.getElementById(id);
+const KEY_JOBS='well_ads_gateway_jobs_v1', KEY_SET='well_ads_gateway_settings_v1';
+let jobs=JSON.parse(localStorage.getItem(KEY_JOBS)||'[]');
+let settings=JSON.parse(localStorage.getItem(KEY_SET)||'{}');
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2600)}
+function save(){localStorage.setItem(KEY_JOBS,JSON.stringify(jobs));render()}
+function esc(s=''){return String(s).replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]))}
+function fmt(d){try{return new Date(d).toLocaleString('th-TH')}catch{return '-'}}
+function badge(s){const map={pending:['รอส่ง','pending'],sent:['สำเร็จ','sent'],failed:['ล้มเหลว','failed'],draft:['ร่าง','draft']};const a=map[s]||[s,'draft'];return `<span class="badge ${a[1]}">${a[0]}</span>`}
+function render(){
+ $('nAll').textContent=jobs.length;$('nPending').textContent=jobs.filter(x=>x.status==='pending').length;$('nSent').textContent=jobs.filter(x=>x.status==='sent').length;$('nFailed').textContent=jobs.filter(x=>x.status==='failed').length;
+ if(!jobs.length){$('tableWrap').innerHTML='<div class="empty">ยังไม่มีรายการ</div>';return}
+ $('tableWrap').innerHTML=`<table><thead><tr><th>งาน</th><th>สถานะ</th><th>กำหนดส่ง</th><th>ส่งล่าสุด</th><th>การทำงาน</th></tr></thead><tbody>${jobs.slice().reverse().map(j=>`<tr><td><b>${esc(j.title||'ไม่มีชื่อ')}</b><br><span class="small">${esc((j.message||'').slice(0,90))}</span></td><td>${badge(j.status)}${j.error?`<br><span class="small">${esc(j.error)}</span>`:''}</td><td>${j.scheduleAt?fmt(j.scheduleAt):'-'}</td><td>${j.sentAt?fmt(j.sentAt):'-'}</td><td><button class="alt" onclick="sendJob('${j.id}')">ส่ง</button> <button class="alt" onclick="duplicateJob('${j.id}')">ทำสำเนา</button> <button class="danger" onclick="deleteJob('${j.id}')">ลบ</button></td></tr>`).join('')}</tbody></table>`;
+}
+async function gateway(payload){
+ if(!settings.webhook) throw new Error('ยังไม่ได้ตั้งค่า Webhook URL');
+ const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({webhookUrl:settings.webhook,payload})});
+ const d=await r.json().catch(()=>({})); if(!r.ok||!d.ok) throw new Error(d.error||d.response||'ส่งไม่สำเร็จ'); return d;
+}
+window.sendJob=async(id)=>{const j=jobs.find(x=>x.id===id);if(!j)return;j.error='';j.status='pending';save();try{await gateway({type:'facebook_post',jobId:j.id,title:j.title,message:j.message,imageUrl:j.imageUrl,linkUrl:j.linkUrl,scheduleAt:j.scheduleAt});j.status='sent';j.sentAt=new Date().toISOString();toast('ส่งไปยังตัวกลางสำเร็จ')}catch(e){j.status='failed';j.error=e.message;toast('ส่งไม่สำเร็จ: '+e.message)}save()}
+window.deleteJob=id=>{jobs=jobs.filter(x=>x.id!==id);save()}
+window.duplicateJob=id=>{const j=jobs.find(x=>x.id===id);if(!j)return;jobs.push({...j,id:crypto.randomUUID(),status:'draft',sentAt:null,error:'',createdAt:new Date().toISOString()});save();toast('ทำสำเนาแล้ว')}
+async function runQueue(){const due=jobs.filter(j=>j.status==='pending'&&j.scheduleAt&&new Date(j.scheduleAt)<=new Date());for(const j of due)await sendJob(j.id);if(!due.length)toast('ยังไม่มีคิวที่ถึงเวลา')}
+$('saveSettings').onclick=()=>{settings={provider:$('provider').value,webhook:$('webhook').value.trim()};localStorage.setItem(KEY_SET,JSON.stringify(settings));toast('บันทึกแล้ว')}
+$('testWebhook').onclick=async()=>{settings={provider:$('provider').value,webhook:$('webhook').value.trim()};localStorage.setItem(KEY_SET,JSON.stringify(settings));try{await gateway({type:'connection_test',message:'Well Ads Gateway connection test'});toast('เชื่อมต่อสำเร็จ')}catch(e){toast('เชื่อมต่อไม่สำเร็จ: '+e.message)}}
+$('createJob').onclick=async()=>{const mode=$('mode').value;const j={id:crypto.randomUUID(),title:$('title').value.trim(),message:$('message').value.trim(),imageUrl:$('imageUrl').value.trim(),linkUrl:$('linkUrl').value.trim(),scheduleAt:$('scheduleAt').value?new Date($('scheduleAt').value).toISOString():null,status:mode==='draft'?'draft':'pending',createdAt:new Date().toISOString(),sentAt:null,error:''};if(!j.message&&!j.imageUrl)return toast('ใส่ข้อความหรือรูปอย่างน้อย 1 อย่าง');jobs.push(j);save();if(mode==='now')await sendJob(j.id);else toast(mode==='draft'?'บันทึกร่างแล้ว':'เพิ่มเข้าคิวแล้ว')}
+$('clearForm').onclick=()=>['title','message','imageUrl','linkUrl','scheduleAt'].forEach(id=>$(id).value='');
+$('runQueue').onclick=runQueue;
+$('clearHistory').onclick=()=>{if(confirm('ล้างประวัติทั้งหมด?')){jobs=[];save()}}
+$('exportData').onclick=()=>{const b=new Blob([JSON.stringify({settings:{provider:settings.provider||''},jobs},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='well-ads-gateway-export.json';a.click();URL.revokeObjectURL(a.href)}
+async function health(){try{const r=await fetch(API);const d=await r.json();$('apiStatus').textContent=d.ok?'● Gateway พร้อมใช้งาน':'Gateway มีปัญหา';$('apiStatus').style.color=d.ok?'#85f0b7':'#ffb3ba'}catch{$('apiStatus').textContent='● Gateway ติดต่อไม่ได้';$('apiStatus').style.color='#ffb3ba'}}
+$('provider').value=settings.provider||'make';$('webhook').value=settings.webhook||'';render();health();setInterval(runQueue,30000);
+</script></body></html>
