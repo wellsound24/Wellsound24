@@ -1,0 +1,27 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Well Ads AI</title><style>html,body{margin:0;min-height:100%;background:#0b0b0b}#boot{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#fff;padding:24px}</style></head><body><div id="boot">กำลังเปิด Well Ads AI...</div><script>
+(async()=>{
+  const res=await fetch('/api/wellads-source',{cache:'no-store'});
+  if(!res.ok) throw new Error('โหลดโปรแกรมเดิมไม่สำเร็จ ('+res.status+')');
+  const shell=await res.text();
+  const m=shell.match(/atob\(\"([A-Za-z0-9+/=]+)\"\)/);
+  if(!m) throw new Error('ไม่พบข้อมูลโปรแกรมเดิม');
+  const b=atob(m[1]); const u=new Uint8Array(b.length); for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);
+  const inner=await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  const patch=`<script>(()=>{
+    const H='wellads_professional_post_history_v2';
+    const banned=['มีเรื่องดีๆ มาแชร์'];
+    const norm=v=>String(v||'').replace(/\\s+/g,' ').trim();
+    const labelOf=el=>norm((el.closest('label')?.innerText||'')+' '+(el.parentElement?.innerText||'').slice(0,180)+' '+(el.placeholder||'')+' '+(el.name||'')+' '+(el.id||''));
+    const fields=()=>[...document.querySelectorAll('input,select,textarea')].map(el=>({el,label:labelOf(el),value:norm(el.value)})).filter(x=>x.value);
+    const get=rx=>fields().find(x=>rx.test(x.label))?.value||'';
+    const target=()=>{let best=null,score=-999;for(const el of document.querySelectorAll('textarea,[contenteditable="true"],input[type="text"]')){const t=labelOf(el).toLowerCase();let s=0;if(/ข้อความโพสต์|โพสต์งาน|แคปชั่น|caption/.test(t))s+=60;if(/โพสต์|post|ข้อความ/.test(t))s+=20;if(el.tagName==='TEXTAREA')s+=10;if(/ค้นหา|search|เบอร์|โทร|url|เว็บไซต์|line/.test(t))s-=40;if(s>score){score=s;best=el}}return best};
+    const setv=(el,v)=>{if(el.isContentEditable){el.textContent=v;el.dispatchEvent(new Event('input',{bubbles:true}));return}const p=el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;const st=Object.getOwnPropertyDescriptor(p,'value')?.set;st?st.call(el,v):el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))};
+    const pick=a=>a[Math.floor(Math.random()*a.length)];
+    function build(){const job=norm(get(/ประเภทงาน|ชื่องาน|งานที่ไปทำ|ลักษณะงาน/i))||'งานที่ได้รับมอบหมาย';const loc=norm(get(/สถานที่|พื้นที่|จังหวัด|อำเภอ|location/i));const svc=norm(get(/รายละเอียดงาน|บริการที่ให้|สิ่งที่ทำ|รายละเอียดบริการ|อุปกรณ์|ระบบเสียง|ระบบแสง|เวที/i))||'ดูแลหน้างานตามรายละเอียดที่ลูกค้ามอบหมาย';const cust=norm(get(/ชื่อลูกค้า|ลูกค้า|บริษัท|หน่วยงาน/i));const where=loc?' ณ '+loc:'';const cp=cust?cust:'ลูกค้า';const l1=['อีกหนึ่งผลงานที่ทีม Wellsound24 ได้รับความไว้วางใจให้ดูแล '+job+where,'ส่งมอบอีกหนึ่งงานอย่างเรียบร้อย | '+job+where,'เก็บภาพอีกหนึ่งผลงานจากทีม Wellsound24 กับ '+job+where,'อีกหนึ่งงานที่เราใส่ใจในทุกรายละเอียด | '+job+where,'เบื้องหลังอีกหนึ่งงานคุณภาพจากทีม Wellsound24 | '+job+where,'อีกหนึ่งความไว้วางใจที่ Wellsound24 ได้รับ | '+job+where];const l2=['ทีมงานดูแล '+svc+' พร้อมประสานงานและควบคุมรายละเอียดตลอดงานอย่างเป็นระบบ','Wellsound24 รับผิดชอบ '+svc+' โดยทีมงานดูแลทุกขั้นตอนให้การทำงานเป็นไปอย่างราบรื่น','สำหรับงานนี้ทีมของเราดูแล '+svc+' พร้อมตรวจสอบความพร้อมในแต่ละขั้นตอนอย่างละเอียด','เราใส่ใจตั้งแต่การเตรียมงานจนถึงหน้างาน โดยดูแล '+svc+' ให้เหมาะสมกับรูปแบบของงาน'];const l3=['ขอขอบพระคุณ'+cp+'ที่ไว้วางใจให้ Wellsound24 ได้เป็นส่วนหนึ่งในการดูแลงานครั้งนี้ครับ','ขอบพระคุณ'+cp+'สำหรับความไว้วางใจที่มอบให้ทีม Wellsound24 ในงานครั้งนี้ครับ','Wellsound24 ขอขอบพระคุณ'+cp+'ที่เลือกใช้บริการและมอบความไว้วางใจให้ทีมงานของเราครับ','ขอขอบพระคุณ'+cp+'ที่ให้โอกาสทีม Wellsound24 ได้ดูแลรายละเอียดของงานในครั้งนี้ครับ','ขอขอบพระคุณที่ไว้วางใจทีม Wellsound24 ให้ร่วมเป็นส่วนหนึ่งของความสำเร็จในงานครั้งนี้ครับ'];let hist=[];try{hist=JSON.parse(localStorage.getItem(H)||'[]')}catch{}let out='';for(let i=0;i<80;i++){out=pick(l1)+'\\n\\n'+pick(l2)+'\\n\\n'+pick(l3);if(!hist.includes(out)&&!banned.some(x=>out.includes(x)))break}hist.unshift(out);localStorage.setItem(H,JSON.stringify([...new Set(hist)].slice(0,50)));return out}
+    function isBtn(btn){const t=norm(btn.innerText||btn.textContent).toLowerCase();return (/เจน|generate|สร้าง/.test(t)&&/ข้อความ|โพสต์|caption|ai/.test(t))||/ai.*โพสต์|ai.*ข้อความ|เจนข้อความ/.test(t)}
+    document.addEventListener('click',e=>{const btn=e.target.closest?.('button,[role="button"]');if(!btn||!isBtn(btn))return;const t=target();if(!t)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();setv(t,build())},true);
+  })();<\/script>`;
+  const finalHtml=/<\/body>/i.test(inner)?inner.replace(/<\/body>/i,patch+'</body>'):inner+patch;
+  document.open();document.write(finalHtml);document.close();
+})().catch(err=>{document.body.innerHTML='<pre style="white-space:pre-wrap;color:white;background:#111;padding:24px;font-family:system-ui">เปิดโปรแกรมไม่สำเร็จ: '+String(err.message||err)+'</pre>'});
+</script></body></html>
