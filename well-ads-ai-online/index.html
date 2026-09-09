@@ -1,7 +1,7 @@
 <!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Well Ads AI</title></head><body><script>
 (async()=>{
-  const SOURCE='https://well-ads-108h1p8ec-wellsound25.vercel.app/?_vercel_share=ChyhB2WyOwIrzVbVViDRiMCHRhtYJPnR';
-  const r=await fetch(SOURCE,{cache:'no-store',credentials:'include'});
+  const SOURCE='/wellads-original';
+  const r=await fetch(SOURCE,{cache:'no-store'});
   if(!r.ok) throw new Error('โหลด UI เดิมไม่สำเร็จ: '+r.status);
   const shell=await r.text();
   let m=shell.match(/atob\(\s*["']([A-Za-z0-9+/=]+)["']\s*\)/);
@@ -11,7 +11,7 @@
   let html=await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
   const patch=String.raw`<script id="wellads-post-fix">
 (()=>{
-  const KEY='wellads_professional_post_history_v8';
+  const KEY='wellads_professional_post_history_v9';
   const clean=v=>String(v||'').replace(/\s+/g,' ').trim();
   const pick=a=>a[Math.floor(Math.random()*a.length)];
   const banned=['มีเรื่องดีๆมาแชร์','มีเรื่องดี ๆ มาแชร์','อยากนำมาแชร์'];
