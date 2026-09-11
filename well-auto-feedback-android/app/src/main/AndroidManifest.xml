@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <application android:theme="@style/AppTheme" android:label="Well Auto Feedback M32R" android:usesCleartextTraffic="true" android:hardwareAccelerated="true">
-        <activity android:name=".MainActivityV15" android:exported="true" android:resizeableActivity="true">
+        <activity android:name=".MainActivity" android:exported="true" android:resizeableActivity="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
