@@ -13,9 +13,10 @@ import java.util.*;
 
 public class MainActivity extends Activity {
     EditText ip;
-    TextView status, candidate, notchText, log, rtaState;
-    Spinner target, mode;
+    TextView status, candidate, notchText, log, rtaState, flatInfo;
+    Spinner target, operation, mode;
     CheckBox arm;
+    Button flatButton;
     SpectrumView spectrum;
     DatagramSocket socket;
     volatile boolean running=false, connected=false;
@@ -25,7 +26,10 @@ public class MainActivity extends Activity {
     final HashMap<String,Object> snapshot=new HashMap<>();
     final float[] rta=new float[100];
     long candStart=0; int candKey=-1;
+
     final int[] F={20,21,22,24,26,28,30,32,34,36,39,42,45,48,52,55,59,63,68,73,78,84,90,96,103,110,118,127,136,146,156,167,179,192,206,221,237,254,272,292,313,335,359,385,412,442,474,508,544,583,625,670,718,769,825,884,947,1020,1090,1170,1250,1340,1440,1540,1650,1770,1890,2030,2180,2330,2500,2680,2870,3080,3300,3540,3790,4060,4350,4670,5000,5360,5740,6160,6600,7070,7580,8120,8710,9330,10000,10720,11490,12310,13200,14140,15160,16250,17410,18660};
+    final int[] FLAT_CENTER={125,250,500,1000,2500,6300};
+    final int[][] FLAT_RANGE={{80,180},{180,355},{355,710},{710,1400},{1400,3500},{3500,12000}};
 
     static class Notch { int band,f,conf; float cut,q; Notch(int b,int ff,float c,float qq,int co){band=b;f=ff;cut=c;q=qq;conf=co;} }
 
@@ -33,7 +37,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         try{ buildUi(); }
         catch(Throwable e){
-            TextView v=new TextView(this);v.setText("Well Auto Feedback M32R v1.4\n\nStartup error:\n"+e);v.setTextColor(Color.WHITE);v.setBackgroundColor(Color.rgb(8,11,16));v.setPadding(30,30,30,30);setContentView(v);
+            TextView v=new TextView(this);v.setText("Well Auto Feedback M32R v1.6\n\nStartup error:\n"+e);v.setTextColor(Color.WHITE);v.setBackgroundColor(Color.rgb(8,11,16));v.setPadding(30,30,30,30);setContentView(v);
         }
     }
 
@@ -41,7 +45,7 @@ public class MainActivity extends Activity {
         ScrollView sc=new ScrollView(this);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(28,28,28,28);root.setBackgroundColor(Color.rgb(8,11,16));sc.addView(root);
         root.addView(tv("Well Auto Feedback • M32R",24,true));
-        TextView ver=tv("Android v1.4 • Offline LAN • Live RTA / Auto Notch",13,false);ver.setTextColor(Color.LTGRAY);root.addView(ver);
+        TextView ver=tv("Android v1.6 • Offline LAN • Feedback / Smooth Flat EQ",13,false);ver.setTextColor(Color.LTGRAY);root.addView(ver);
         status=tv("READY — NOT CONNECTED",16,true);status.setTextColor(Color.rgb(251,191,36));root.addView(status);
 
         ip=new EditText(this);ip.setSingleLine(true);ip.setText("192.168.2.200");ip.setTextColor(Color.WHITE);ip.setHintTextColor(Color.GRAY);ip.setHint("M32R IP");root.addView(ip,lp());
@@ -49,10 +53,18 @@ public class MainActivity extends Activity {
 
         String[] targets=new String[17];targets[0]="Main LR";for(int i=1;i<=16;i++)targets[i]=String.format(Locale.US,"Bus %02d",i);
         target=new Spinner(this);target.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,targets));target.setSelection(1);root.addView(target,lp());
+
+        operation=new Spinner(this);
+        operation.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"FEEDBACK","FLAT EQ"}));
+        root.addView(operation,lp());
+
         mode=new Spinner(this);mode.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"MONITOR","ASSIST","AUTO","RING OUT"}));mode.setSelection(1);root.addView(mode,lp());
 
         arm=new CheckBox(this);arm.setText("ARM AUTO CUT");arm.setTextColor(Color.WHITE);arm.setEnabled(false);root.addView(arm,lp());
-        TextView safe=tv("เริ่มด้วย ASSIST ก่อน • AUTO จะเขียน PEQ จริงลง Bus/Main ที่เลือก • สูงสุด 6 Notches • Max Cut -9 dB",13,false);safe.setTextColor(Color.rgb(251,191,36));root.addView(safe);
+        TextView safe=tv("FEEDBACK = คัทเสียงหอนแบบ Notch แคบ • FLAT EQ = ปรับกว้างแบบ Smooth สูงสุด +3 / -6 dB",13,false);safe.setTextColor(Color.rgb(251,191,36));root.addView(safe);
+
+        flatButton=button("ANALYZE / APPLY FLAT EQ");flatButton.setVisibility(View.GONE);root.addView(flatButton,lp());
+        flatInfo=tv("FLAT EQ: รอข้อมูล RTA",13,false);flatInfo.setTextColor(Color.LTGRAY);flatInfo.setVisibility(View.GONE);root.addView(flatInfo);
 
         spectrum=new SpectrumView(this);root.addView(spectrum,new LinearLayout.LayoutParams(-1,420));
         rtaState=tv("RTA: waiting for M32R",13,false);rtaState.setTextColor(Color.LTGRAY);root.addView(rtaState);
@@ -66,18 +78,39 @@ public class MainActivity extends Activity {
         con.setOnClickListener(v->connectMixer());
         undo.setOnClickListener(v->undoLast());
         restore.setOnClickListener(v->restoreEq());
+        flatButton.setOnClickListener(v->runFlatEq());
+
+        operation.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
+            public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){
+                arm.setChecked(false);
+                boolean flat=pos==1;
+                mode.setVisibility(flat?View.GONE:View.VISIBLE);
+                flatButton.setVisibility(flat?View.VISIBLE:View.GONE);
+                flatInfo.setVisibility(flat?View.VISIBLE:View.GONE);
+                candidate.setVisibility(flat?View.GONE:View.VISIBLE);
+                arm.setText(flat?"ARM FLAT EQ WRITE":"ARM AUTO CUT");
+                notchText.setText(flat?"FLAT EQ: ยังไม่ได้ Apply":"Auto Notches: "+bank.size()+" / 6");
+                uiLog("Mode → "+(flat?"FLAT EQ":"FEEDBACK"));
+            }
+            public void onNothingSelected(android.widget.AdapterView<?> p){}
+        });
+
         arm.setOnCheckedChangeListener((b,isChecked)->{
             if(isChecked && !connected){ arm.setChecked(false); toast("ต้อง CONNECT M32R ก่อน"); return; }
             if(isChecked){
-                new AlertDialog.Builder(this).setTitle("เปิด ARM AUTO CUT?").setMessage("แอปจะสามารถแก้ PEQ จริงของ "+String.valueOf(target.getSelectedItem())+" ได้เมื่อเลือก AUTO หรือ RING OUT").setPositiveButton("เปิด ARM",(d,w)->uiLog("ARM AUTO CUT = ON")).setNegativeButton("ยกเลิก",(d,w)->arm.setChecked(false)).show();
-            } else uiLog("ARM AUTO CUT = OFF");
+                boolean flat=isFlat();
+                String msg=flat?"แอปจะเขียน PEQ 1-6 ของ "+String.valueOf(target.getSelectedItem())+" เพื่อปรับ Smooth Flat EQ":"แอปจะสามารถคัท Feedback และเขียน PEQ จริงของ "+String.valueOf(target.getSelectedItem())+" เมื่อเลือก AUTO หรือ RING OUT";
+                new AlertDialog.Builder(this).setTitle(flat?"เปิด ARM FLAT EQ?":"เปิด ARM AUTO CUT?").setMessage(msg).setPositiveButton("เปิด ARM",(d,w)->uiLog("ARM = ON")).setNegativeButton("ยกเลิก",(d,w)->arm.setChecked(false)).show();
+            } else uiLog("ARM = OFF");
         });
+
         target.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener(){
             public void onItemSelected(android.widget.AdapterView<?> p,View v,int pos,long id){if(socket!=null&&connected){arm.setChecked(false);bank.clear();configure();snapshotEq();refresh();uiLog("Target → "+String.valueOf(target.getSelectedItem()));}}
             public void onNothingSelected(android.widget.AdapterView<?> p){}
         });
     }
 
+    boolean isFlat(){return operation!=null && operation.getSelectedItemPosition()==1;}
     TextView tv(String s,int size,boolean bold){TextView v=new TextView(this);v.setText(s);v.setTextColor(Color.WHITE);v.setTextSize(size);v.setPadding(0,10,0,10);if(bold)v.setTypeface(null,1);return v;}
     Button button(String s){Button b=new Button(this);b.setText(s);return b;}
     LinearLayout.LayoutParams lp(){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,8,0,8);return p;}
@@ -111,7 +144,24 @@ public class MainActivity extends Activity {
     void configureNow()throws Exception{sendNow("/-prefs/rta/source",source());sendNow("/-prefs/rta/pos",0);sendNow("/-prefs/rta/det",1);}
     void snapshotEq(){snapshot.clear();String b=base();send(b+"/eq/on");for(int i=1;i<=6;i++)for(String p:new String[]{"type","f","g","q"})send(b+"/eq/"+i+"/"+p);}
 
-    void keepAlive(){long sub=0;while(running){try{sendNow("/xremote");if(System.currentTimeMillis()-sub>7000){configureNow();sendNow("/meters","/meters/15",1);sub=System.currentTimeMillis();}Thread.sleep(1000);}catch(Exception e){if(running)uiLog("KeepAlive: "+e.getMessage());}}}
+    void keepAlive(){
+        long lastSub=0;
+        while(running){
+            try{
+                long now=System.currentTimeMillis();
+                sendNow("/xremote");
+                boolean rtaStale=(lastRta==0)||(now-lastRta>1800);
+                if(now-lastSub>3000 || rtaStale){
+                    configureNow();
+                    sendNow("/meters","/meters/15",1);
+                    lastSub=now;
+                    if(rtaStale && connected)runOnUiThread(()->rtaState.setText("RTA: AUTO-RECONNECT…"));
+                }
+                Thread.sleep(900);
+            }catch(Exception e){if(running)uiLog("KeepAlive: "+e.getMessage());}
+        }
+    }
+
     void rxLoop(){byte[] buf=new byte[65535];while(running){try{DatagramPacket p=new DatagramPacket(buf,buf.length);socket.receive(p);lastRx=System.currentTimeMillis();parse(Arrays.copyOf(p.getData(),p.getLength()));}catch(SocketTimeoutException e){if(System.currentTimeMillis()-lastRx>4500)runOnUiThread(()->{status.setText("M32R LINK LOST");status.setTextColor(Color.rgb(248,113,113));arm.setChecked(false);});}catch(Exception e){if(running)uiLog("RX: "+e.getMessage());}}}
 
     void parse(byte[] d){
@@ -129,7 +179,7 @@ public class MainActivity extends Activity {
     }
 
     void decodeRta(byte[] b){
-        try{int off=b.length>=204?4:0;if(b.length-off<200)return;ByteBuffer bb=ByteBuffer.wrap(b,off,200).order(ByteOrder.LITTLE_ENDIAN);for(int i=0;i<100;i++)rta[i]=bb.getShort()/256f;runOnUiThread(()->spectrum.setData(rta));detect();}catch(Exception ignored){}
+        try{int off=b.length>=204?4:0;if(b.length-off<200)return;ByteBuffer bb=ByteBuffer.wrap(b,off,200).order(ByteOrder.LITTLE_ENDIAN);for(int i=0;i<100;i++)rta[i]=bb.getShort()/256f;runOnUiThread(()->spectrum.setData(rta));if(!isFlat())detect();}catch(Exception ignored){}
     }
 
     void detect(){
@@ -158,9 +208,71 @@ public class MainActivity extends Activity {
         bank.add(new Notch(band,f,cut,q,conf));uiLog("AUTO CUT → EQ"+band+"  "+f+" Hz  "+String.format(Locale.US,"%.2f",cut)+" dB  Q "+String.format(Locale.US,"%.1f",q)+"  conf "+conf+"%");runOnUiThread(this::refresh);
     }
 
-    void undoLast(){if(bank.isEmpty()){toast("ยังไม่มี Auto Cut");return;}Notch n=bank.remove(bank.size()-1);for(String p:new String[]{"type","f","g","q"}){String a=base()+"/eq/"+n.band+"/"+p;Object v=snapshot.get(a);if(v!=null)send(a,v);}refresh();uiLog("Undo EQ"+n.band+" • "+n.f+" Hz");}
+    void runFlatEq(){
+        if(!connected){toast("ต้อง CONNECT M32R ก่อน");return;}
+        if(lastRta==0 || System.currentTimeMillis()-lastRta>2200){toast("RTA ยังไม่พร้อม");return;}
+        float[] levels=new float[6];
+        for(int b=0;b<6;b++){
+            float sum=0;int n=0;
+            for(int i=0;i<F.length;i++){
+                if(F[i]>=FLAT_RANGE[b][0] && F[i]<FLAT_RANGE[b][1]){
+                    float sm=smoothRta(i);sum+=sm;n++;
+                }
+            }
+            levels[b]=n>0?sum/n:-90f;
+        }
+        float[] sorted=levels.clone();Arrays.sort(sorted);float ref=(sorted[2]+sorted[3])/2f;
+        float avg=0;for(float v:levels)avg+=v;avg/=6f;
+        if(avg<-72f){toast("ระดับสัญญาณต่ำเกินไปสำหรับ Flat EQ");return;}
+
+        final float[] corr=new float[6];
+        StringBuilder s=new StringBuilder("Smooth Flat suggestion\n");
+        for(int i=0;i<6;i++){
+            float c=ref-levels[i];
+            if(Math.abs(c)<0.75f)c=0;
+            c=Math.max(-6f,Math.min(3f,c));
+            c=Math.round(c*4f)/4f;
+            corr[i]=c;
+            s.append(FLAT_CENTER[i]).append(" Hz  ").append(String.format(Locale.US,"%+.2f dB",c)).append("\n");
+        }
+        flatInfo.setText(s.toString()+"Reference "+String.format(Locale.US,"%.1f dB",ref));
+        if(!arm.isChecked()){
+            uiLog("FLAT EQ analyzed only — ARM OFF");
+            toast("วิเคราะห์แล้ว • เปิด ARM FLAT EQ หากต้องการเขียนค่า");
+            return;
+        }
+        new AlertDialog.Builder(this).setTitle("Apply Smooth Flat EQ?").setMessage(s.toString()+"\nจะเขียน PEQ 1-6 ของ "+String.valueOf(target.getSelectedItem())).setPositiveButton("APPLY",(d,w)->applyFlat(corr)).setNegativeButton("ยกเลิก",null).show();
+    }
+
+    float smoothRta(int i){
+        float sum=0,weight=0;
+        for(int k=-2;k<=2;k++){
+            int j=Math.max(0,Math.min(99,i+k));float w=(k==0?3f:(Math.abs(k)==1?2f:1f));sum+=rta[j]*w;weight+=w;
+        }
+        return sum/weight;
+    }
+
+    void applyFlat(float[] corr){
+        bank.clear();String b=base();send(b+"/eq/on",1);
+        for(int i=0;i<6;i++){
+            int band=i+1;float q=1.10f;
+            send(b+"/eq/"+band+"/type",2);
+            send(b+"/eq/"+band+"/f",nlog(FLAT_CENTER[i],20,20000));
+            send(b+"/eq/"+band+"/g",nlin(corr[i],-15,15));
+            send(b+"/eq/"+band+"/q",nlog(q,10,.3f));
+        }
+        notchText.setText("FLAT EQ: APPLIED • 6 Smooth Bands");
+        uiLog("SMOOTH FLAT EQ applied to "+String.valueOf(target.getSelectedItem())+" • Boost ≤ +3 dB • Cut ≤ -6 dB");
+    }
+
+    void undoLast(){
+        if(isFlat()){
+            restoreEq();return;
+        }
+        if(bank.isEmpty()){toast("ยังไม่มี Auto Cut");return;}Notch n=bank.remove(bank.size()-1);for(String p:new String[]{"type","f","g","q"}){String a=base()+"/eq/"+n.band+"/"+p;Object v=snapshot.get(a);if(v!=null)send(a,v);}refresh();uiLog("Undo EQ"+n.band+" • "+n.f+" Hz");
+    }
     void restoreEq(){if(snapshot.isEmpty()){toast("ยังไม่มี EQ Snapshot — Connect M32R ก่อน");return;}arm.setChecked(false);for(Map.Entry<String,Object> e:snapshot.entrySet())send(e.getKey(),e.getValue());bank.clear();refresh();uiLog("Original EQ snapshot restored");}
-    void refresh(){runOnUiThread(()->notchText.setText("Auto Notches: "+bank.size()+" / 6"));}
+    void refresh(){runOnUiThread(()->notchText.setText(isFlat()?"FLAT EQ: Original / Ready":"Auto Notches: "+bank.size()+" / 6"));}
     void uiLog(String s){runOnUiThread(()->{if(log!=null)log.setText(s+"\n"+log.getText());});}
     float nlog(float v,float lo,float hi){return(float)(Math.log(v/lo)/Math.log(hi/lo));}
     float nlin(float v,float lo,float hi){return Math.max(0,Math.min(1,(v-lo)/(hi-lo)));}
