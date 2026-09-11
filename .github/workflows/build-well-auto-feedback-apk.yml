@@ -3,7 +3,6 @@ on:
   push:
     branches: [ well-auto-feedback-apk ]
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,9 +19,9 @@ jobs:
         working-directory: well-auto-feedback-android
         run: gradle :app:assembleDebug --stacktrace
       - name: Rename APK
-        run: cp well-auto-feedback-android/app/build/outputs/apk/debug/app-debug.apk WellAutoFeedbackM32R_v2.3.apk
+        run: cp well-auto-feedback-android/app/build/outputs/apk/debug/app-debug.apk WellAutoFeedbackM32R_v2.4.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: WellAutoFeedbackM32R_v2.3
-          path: WellAutoFeedbackM32R_v2.3.apk
+          name: WellAutoFeedbackM32R_v2.4
+          path: WellAutoFeedbackM32R_v2.4.apk
           if-no-files-found: error
