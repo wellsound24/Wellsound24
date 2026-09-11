@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         try{buildUi();}catch(Throwable e){
-            TextView v=new TextView(this);v.setText("Well Auto Feedback M32R v2.0\n\nStartup error:\n"+e);v.setTextColor(Color.WHITE);v.setBackgroundColor(Color.rgb(8,11,16));v.setPadding(30,30,30,30);setContentView(v);
+            TextView v=new TextView(this);v.setText("Well Auto Feedback M32R v2.1\n\nStartup error:\n"+e);v.setTextColor(Color.WHITE);v.setBackgroundColor(Color.rgb(8,11,16));v.setPadding(30,30,30,30);setContentView(v);
         }
     }
 
@@ -43,7 +43,7 @@ public class MainActivity extends Activity {
         ScrollView sc=new ScrollView(this);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(24,24,24,24);root.setBackgroundColor(Color.rgb(8,11,16));sc.addView(root);
         root.addView(tv("Well Auto Feedback • M32R",24,true));
-        TextView ver=tv("Android v2.0 • REALTIME FEEDBACK / FLAT EQ • Dual GEQ",13,false);ver.setTextColor(Color.LTGRAY);root.addView(ver);
+        TextView ver=tv("Android v2.1 • REALTIME FEEDBACK / SMOOTH FLAT EQ • Dual GEQ",13,false);ver.setTextColor(Color.LTGRAY);root.addView(ver);
         status=tv("READY — NOT CONNECTED",16,true);status.setTextColor(Color.rgb(251,191,36));root.addView(status);
 
         ip=new EditText(this);ip.setSingleLine(true);ip.setText("192.168.2.200");ip.setTextColor(Color.WHITE);ip.setHintTextColor(Color.GRAY);ip.setHint("M32R IP");root.addView(ip,lp());
@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
 
         startStop=btn("▶ START REALTIME");startStop.setEnabled(false);root.addView(startStop,lp());
         runState=tv("ENGINE: STOPPED",15,true);runState.setTextColor(Color.rgb(148,163,184));root.addView(runState);
-        TextView help=tv("เลือก FEEDBACK หรือ FLAT EQ แล้วกด START • ระบบทำงานต่อเนื่อง Real-time • กด STOP เพื่อหยุดการเขียน GEQ ทันที",13,false);help.setTextColor(Color.rgb(251,191,36));root.addView(help);
+        TextView help=tv("เลือก FEEDBACK หรือ FLAT EQ แล้วกด START • FLAT EQ จะเฉลี่ย RTA นานขึ้น มี Deadband ±1 dB และขยับ GEQ ไม่เกิน 0.5 dB ต่อรอบ เพื่อให้เสียงสมูท",13,false);help.setTextColor(Color.rgb(251,191,36));root.addView(help);
 
         spectrum=new SpectrumView(this);root.addView(spectrum,new LinearLayout.LayoutParams(-1,390));
         rtaState=tv("RTA: waiting for M32R",13,false);rtaState.setTextColor(Color.LTGRAY);root.addView(rtaState);
@@ -182,22 +182,44 @@ public class MainActivity extends Activity {
         float[] frame=new float[31];
         for(int i=0;i<31;i++){
             int idx=nearestRta(GEQF[i]);float s=0;int n=0;
-            for(int j=Math.max(0,idx-2);j<=Math.min(99,idx+2);j++){s+=rta[j];n++;}
+            for(int j=Math.max(0,idx-3);j<=Math.min(99,idx+3);j++){s+=rta[j];n++;}
             frame[i]=s/n;
             flatAverage[i]=(flatAverage[i]*flatFrames+frame[i])/(flatFrames+1f);
         }
         flatFrames++;
         long now=System.currentTimeMillis();
-        if(flatFrames<12||now-lastFlatApply<3500)return;
+        if(flatFrames<24||now-lastFlatApply<5000)return;
+
         float[] cp=flatAverage.clone();Arrays.sort(cp);float reference=cp[15];
-        pushUndo();
+        boolean changed=false;
+        HashMap<Integer,Float> before=new HashMap<Integer,Float>(current);
+
         for(int i=0;i<31;i++){
-            int p=param(i);float old=current.containsKey(p)?denorm(current.get(p)):0f;
-            float correction=Math.max(-1.5f,Math.min(1.0f,(reference-flatAverage[i])*0.35f));
-            float next=Math.max(-6f,Math.min(3f,old+correction));
+            float error=reference-flatAverage[i];
+            if(Math.abs(error)<1.0f)continue;
+
+            int p=param(i);
+            float old=current.containsKey(p)?denorm(current.get(p)):0f;
+            float original=snapshot.containsKey(p)?denorm(snapshot.get(p)):old;
+
+            float desiredOffset=Math.max(-4.0f,Math.min(2.0f,error*0.45f));
+            float desired=original+desiredOffset;
+            float step=Math.max(-0.5f,Math.min(0.5f,desired-old));
+            if(Math.abs(step)<0.10f)continue;
+
+            float next=old+step;
             writeBand(i,next);
+            changed=true;
         }
-        lastFlatApply=now;resetFlatAverage();ui("FLAT EQ • realtime smooth update • 31 bands");
+
+        if(changed){
+            undo.push(before);if(undo.size()>12)undo.removeLast();
+            ui("FLAT EQ • smooth step ≤0.5 dB • deadband ±1 dB • limit -4/+2 dB from original");
+        }else{
+            ui("FLAT EQ • within deadband • no GEQ change");
+        }
+
+        lastFlatApply=now;resetFlatAverage();
     }
 
     int nearestBand(float f){int best=0;double d=99;for(int i=0;i<31;i++){double x=Math.abs(Math.log(GEQF[i]/f));if(x<d){d=x;best=i;}}return best;}
