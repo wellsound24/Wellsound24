@@ -35,7 +35,7 @@ public class MainActivity extends Activity {
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         try{buildUi();}catch(Throwable e){
-            TextView v=new TextView(this);v.setText("Well Auto Feedback M32R v2.1\n\nStartup error:\n"+e);v.setTextColor(Color.WHITE);v.setBackgroundColor(Color.rgb(8,11,16));v.setPadding(30,30,30,30);setContentView(v);
+            TextView v=new TextView(this);v.setText("Well Auto Feedback M32R v2.2\n\nStartup error:\n"+e);v.setTextColor(Color.WHITE);v.setBackgroundColor(Color.rgb(8,11,16));v.setPadding(30,30,30,30);setContentView(v);
         }
     }
 
@@ -43,7 +43,7 @@ public class MainActivity extends Activity {
         ScrollView sc=new ScrollView(this);
         LinearLayout root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);root.setPadding(24,24,24,24);root.setBackgroundColor(Color.rgb(8,11,16));sc.addView(root);
         root.addView(tv("Well Auto Feedback • M32R",24,true));
-        TextView ver=tv("Android v2.1 • REALTIME FEEDBACK / SMOOTH FLAT EQ • Dual GEQ",13,false);ver.setTextColor(Color.LTGRAY);root.addView(ver);
+        TextView ver=tv("Android v2.2 • FAST FEEDBACK / SMOOTH FLAT EQ • Dual GEQ",13,false);ver.setTextColor(Color.LTGRAY);root.addView(ver);
         status=tv("READY — NOT CONNECTED",16,true);status.setTextColor(Color.rgb(251,191,36));root.addView(status);
 
         ip=new EditText(this);ip.setSingleLine(true);ip.setText("192.168.2.200");ip.setTextColor(Color.WHITE);ip.setHintTextColor(Color.GRAY);ip.setHint("M32R IP");root.addView(ip,lp());
@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
 
         startStop=btn("▶ START REALTIME");startStop.setEnabled(false);root.addView(startStop,lp());
         runState=tv("ENGINE: STOPPED",15,true);runState.setTextColor(Color.rgb(148,163,184));root.addView(runState);
-        TextView help=tv("เลือก FEEDBACK หรือ FLAT EQ แล้วกด START • FLAT EQ จะเฉลี่ย RTA นานขึ้น มี Deadband ±1 dB และขยับ GEQ ไม่เกิน 0.5 dB ต่อรอบ เพื่อให้เสียงสมูท",13,false);help.setTextColor(Color.rgb(251,191,36));root.addView(help);
+        TextView help=tv("เลือก FEEDBACK หรือ FLAT EQ แล้วกด START • FEEDBACK ยืนยันเร็วประมาณ 250 ms และคัทครั้งละ 3 dB • FLAT EQ ยังใช้ Smooth เดิม",13,false);help.setTextColor(Color.rgb(251,191,36));root.addView(help);
 
         spectrum=new SpectrumView(this);root.addView(spectrum,new LinearLayout.LayoutParams(-1,390));
         rtaState=tv("RTA: waiting for M32R",13,false);rtaState.setTextColor(Color.LTGRAY);root.addView(rtaState);
@@ -172,9 +172,9 @@ public class MainActivity extends Activity {
         if(band!=candBand){candBand=band;candStart=System.currentTimeMillis();return;}
         long held=System.currentTimeMillis()-candStart;
         runOnUiThread(()->candidate.setText("Feedback Candidate: "+f+" Hz • confirm "+held+" ms"));
-        if(held>500&&engineRunning&&geqOk()){
-            int p=param(band);float old=current.containsKey(p)?denorm(current.get(p)):0f;float cut=Math.max(-12f,old-2.5f);
-            pushUndo();writeBand(band,cut);ui("FEEDBACK • "+f+" Hz • "+String.format(Locale.US,"%.1f",old)+" → "+String.format(Locale.US,"%.1f",cut)+" dB");candStart=0;candBand=-1;
+        if(held>250&&engineRunning&&geqOk()){
+            int p=param(band);float old=current.containsKey(p)?denorm(current.get(p)):0f;float cut=Math.max(-12f,old-3.0f);
+            pushUndo();writeBand(band,cut);ui("FEEDBACK FAST • "+f+" Hz • "+String.format(Locale.US,"%.1f",old)+" → "+String.format(Locale.US,"%.1f",cut)+" dB");candStart=0;candBand=-1;
         }
     }
 
