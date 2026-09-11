@@ -1,0 +1,28 @@
+name: Build Well Auto Feedback APK
+on:
+  push:
+    branches: [ well-auto-feedback-apk ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build debug APK
+        working-directory: well-auto-feedback-android
+        run: gradle :app:assembleDebug --stacktrace
+      - name: Rename APK
+        run: cp well-auto-feedback-android/app/build/outputs/apk/debug/app-debug.apk WellAutoFeedbackM32R_v1.0.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WellAutoFeedbackM32R_v1.0
+          path: WellAutoFeedbackM32R_v1.0.apk
+          if-no-files-found: error
