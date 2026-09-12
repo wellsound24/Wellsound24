@@ -66,7 +66,10 @@ public class MainActivity extends Activity {
   private static byte[] encodeOsc(String address, String type, String value) {
     byte[] a = oscString(address);
     if ("none".equals(type)) return a;
-    String tag = switch(type){ case "int" -> ",i"; case "string" -> ",s"; default -> ",f"; };
+    String tag;
+    if ("int".equals(type)) tag = ",i";
+    else if ("string".equals(type)) tag = ",s";
+    else tag = ",f";
     byte[] t = oscString(tag);
     byte[] v;
     if ("int".equals(type)) { v = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putInt(Integer.parseInt(value)).array(); }
