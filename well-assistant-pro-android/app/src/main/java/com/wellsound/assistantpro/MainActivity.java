@@ -14,6 +14,9 @@ import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -34,13 +37,16 @@ public class MainActivity extends Activity {
   @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
   @Override public void onCreate(Bundle b) {
     super.onCreate(b);
+
     webView = new WebView(this);
     webView.getSettings().setJavaScriptEnabled(true);
     webView.getSettings().setDomStorageEnabled(true);
     webView.getSettings().setAllowFileAccess(true);
+    webView.getSettings().setAllowContentAccess(true);
     webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
+
     webView.setWebViewClient(new WebViewClient());
-    webView.setWebChromeClient(new WebChromeClient(){
+    webView.setWebChromeClient(new WebChromeClient() {
       @Override public void onPermissionRequest(PermissionRequest request) {
         runOnUiThread(() -> {
           boolean wantsAudio = false;
@@ -83,7 +89,42 @@ public class MainActivity extends Activity {
 
     webView.addJavascriptInterface(new NativeBridge(), "WellNative");
     setContentView(webView);
-    webView.loadUrl("file:///android_asset/index.html");
+
+    // Load the bundled UI under a secure HTTPS origin instead of file://.
+    // Android WebView/Chromium can reject getUserMedia() on file origins on some devices.
+    loadUiFromSecureOrigin();
+  }
+
+  private void loadUiFromSecureOrigin() {
+    try {
+      BufferedReader reader = new BufferedReader(
+          new InputStreamReader(getAssets().open("index.html"), StandardCharsets.UTF_8)
+      );
+      StringBuilder html = new StringBuilder();
+      String line;
+      while ((line = reader.readLine()) != null) html.append(line).append('\n');
+      reader.close();
+
+      webView.loadDataWithBaseURL(
+          "https://wellassistant.local/",
+          html.toString(),
+          "text/html",
+          "UTF-8",
+          null
+      );
+    } catch (Exception e) {
+      webView.loadData(
+          "<html><body style='background:#080b14;color:white;font-family:sans-serif;padding:24px'>" +
+          "<h2>Well Assistant Pro</h2><p>UI load error: " + escapeHtml(e.getMessage()) + "</p></body></html>",
+          "text/html",
+          "UTF-8"
+      );
+    }
+  }
+
+  private static String escapeHtml(String s) {
+    if (s == null) return "Unknown";
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
   }
 
   @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
@@ -92,10 +133,12 @@ public class MainActivity extends Activity {
       boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
       PermissionRequest request = pendingWebPermissionRequest;
       pendingWebPermissionRequest = null;
+
       if (request != null) {
         if (granted) request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
         else request.deny();
       }
+
       final String js = granted
           ? "window.onNativeMicPermission && window.onNativeMicPermission(true)"
           : "window.onNativeMicPermission && window.onNativeMicPermission(false)";
@@ -107,14 +150,17 @@ public class MainActivity extends Activity {
     super.onActivityResult(requestCode, resultCode, data);
     if (requestCode == REQ_FILE && fileCallback != null) {
       Uri[] result = null;
-      if (resultCode == RESULT_OK && data != null && data.getData() != null) result = new Uri[]{data.getData()};
+      if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+        result = new Uri[]{data.getData()};
+      }
       fileCallback.onReceiveValue(result);
       fileCallback = null;
     }
   }
 
   @Override public void onBackPressed() {
-    if (webView.canGoBack()) webView.goBack(); else super.onBackPressed();
+    if (webView.canGoBack()) webView.goBack();
+    else super.onBackPressed();
   }
 
   public class NativeBridge {
@@ -126,7 +172,9 @@ public class MainActivity extends Activity {
           socket.send(new DatagramPacket(data, data.length, InetAddress.getByName(ip), port));
           socket.close();
           callback(true, "OSC TX " + address);
-        } catch (Exception e) { callback(false, e.getMessage()); }
+        } catch (Exception e) {
+          callback(false, e.getMessage());
+        }
       });
     }
 
@@ -143,7 +191,9 @@ public class MainActivity extends Activity {
       runOnUiThread(() -> {
         if (android.os.Build.VERSION.SDK_INT < 23 ||
             checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-          webView.evaluateJavascript("window.onNativeMicPermission && window.onNativeMicPermission(true)", null);
+          webView.evaluateJavascript(
+              "window.onNativeMicPermission && window.onNativeMicPermission(true)", null
+          );
         } else {
           requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_MIC);
         }
@@ -159,7 +209,10 @@ public class MainActivity extends Activity {
   }
 
   private void callback(boolean ok, String msg) {
-    String safe = msg == null ? "" : msg.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ");
+    String safe = msg == null ? "" : msg
+        .replace("\\", "\\\\")
+        .replace("'", "\\'")
+        .replace("\n", " ");
     runOnUiThread(() -> webView.evaluateJavascript(
         "window.onNativeOsc && window.onNativeOsc(" + ok + ", '" + safe + "')",
         null
