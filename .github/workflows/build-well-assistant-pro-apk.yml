@@ -27,3 +27,4 @@ jobs:
         with:
           name: Well-Assistant-Pro-APK
           path: Well-Assistant-Pro-v1.0.0.apk
+# build: player-close-v1
