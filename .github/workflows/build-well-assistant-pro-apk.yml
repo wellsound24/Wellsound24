@@ -1,0 +1,29 @@
+name: Build Well Assistant Pro APK
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'well-assistant-pro-android/**'
+      - '.github/workflows/build-well-assistant-pro-apk.yml'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Build debug APK
+        working-directory: well-assistant-pro-android
+        run: gradle assembleDebug --stacktrace
+      - name: Rename APK
+        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-v1.0.0.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Well-Assistant-Pro-APK
+          path: Well-Assistant-Pro-v1.0.0.apk
