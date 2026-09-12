@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="th">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Well License Dashboard</title><style>html,body{margin:0;background:#08111f;color:#fff;font-family:system-ui,sans-serif}.loading{min-height:100vh;display:grid;place-items:center}</style></head>
+<body><div class="loading">กำลังเปิด Well License Dashboard...</div>
+<script>
+(async()=>{
+  const r=await fetch('/index.html?v='+Date.now(),{cache:'no-store'});
+  let html=await r.text();
+
+  html=html.replace(
+    '<div class="sidebar-foot"><div id="profileName" class="muted" style="margin-bottom:8px"></div><button id="logoutBtn" class="btn" style="width:100%">ออกจากระบบ</button></div>',
+    '<div class="sidebar-foot"><div id="profileName" class="muted"></div></div>'
+  );
+
+  html=html.replace(
+    /function renderProjects\(\)\{[\s\S]*?\}\nfunction projectEditor/,
+    `function renderProjects(){$('#view-projects').innerHTML=\`<div class="panel"><div class="panel-head"><div><div class="panel-title">โปรเจกต์</div><div class="panel-sub">รายการโปรเจกต์ทั้งหมด</div></div></div>\${projects.map(x=>\`<div class="switch-line"><span><b>\${esc(x.name)}</b><br><small class="muted">\${esc(x.product_code)}</small></span><button class="btn small" onclick='selectProject(\${JSON.stringify(x.id)})'>เลือก</button></div>\`).join('')}</div>\`}\nfunction projectEditor`
+  );
+
+  html=html.replace(
+    /function renderSettings\(\)\{[\s\S]*?\}\nfunction isVisible/,
+    `function renderSettings(){const p=currentProject();$('#view-settings').innerHTML=\`<div class="settings-grid"><div class="panel"><div class="panel-head"><div><div class="panel-title">ตั้งค่าโปรเจกต์ปัจจุบัน</div><div class="panel-sub">ชื่อโปรเจกต์และฟิลด์ที่ใช้งาน</div></div></div>\${p?projectEditor(p):'<div class="muted">ยังไม่มีโปรเจกต์</div>'}</div><div class="panel"><div class="panel-head"><div><div class="panel-title">บัญชีและระบบ</div><div class="panel-sub">\${esc(profile?.display_name||profile?.username||'Admin')}</div></div></div><button class="btn danger" style="width:100%" onclick="logoutNow()">ออกจากระบบ</button></div></div><div class="panel"><div class="panel-head"><div><div class="panel-title">URL กลาง 3 ช่อง</div><div class="panel-sub">ติ๊กว่าจะให้ URL ไหนแสดงในแต่ละโปรเจกต์</div></div></div>\${urls.map(u=>\`<div class="panel" style="margin:10px 0"><div class="url-row"><input id="url\${u.slot}" class="input" value="\${esc(u.url||'')}" placeholder="https://..."><button class="btn" onclick="saveUrl(\${u.slot})">บันทึก</button></div><div class="muted">\${esc(u.label||('URL '+u.slot))}</div>\${projects.map(pr=>\`<label class="switch-line"><span>\${esc(pr.name)}</span><input type="checkbox" data-vis="\${pr.id}|\${u.slot}" \${isVisible(pr.id,u.slot)?'checked':''}></label>\`).join('')}</div>\`).join('')}</div>\`;$$('[data-vis]').forEach(x=>x.onchange=()=>setVisibility(x))}\nfunction isVisible`
+  );
+
+  html=html.replace(
+    /\$\('#logoutBtn'\)\.onclick=async\(\)=>\{[\s\S]*?\};\n/,
+    `async function logoutNow(){try{await call(API.core,{action:'logout'})}catch{}token='';profile=null;sessionStorage.clear();localStorage.removeItem('well_admin_remember_token');location.reload()}\nwindow.logoutNow=logoutNow;\n`
+  );
+
+  document.open();document.write(html);document.close();
+})().catch(e=>{document.body.innerHTML='<div class="loading">เปิดระบบไม่สำเร็จ<br>'+String(e.message||e)+'</div>'});
+</script></body></html>
