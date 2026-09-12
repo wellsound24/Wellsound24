@@ -1,0 +1,30 @@
+name: Build Well License Android APK
+
+on:
+  push:
+    branches:
+      - well-license-dashboard-android
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: well-license-dashboard-android
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build debug APK
+        working-directory: android-license-app
+        run: gradle assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WellLicenseDashboard-APK
+          path: android-license-app/app/build/outputs/apk/debug/app-debug.apk
