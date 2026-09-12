@@ -5,6 +5,9 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -23,16 +26,25 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
   private static final int REQ_MIC = 501;
   private static final int REQ_FILE = 502;
+  private static final int SAMPLE_RATE = 48000;
+  private static final int FFT_SIZE = 2048;
+
   private WebView webView;
   private ValueCallback<Uri[]> fileCallback;
   private PermissionRequest pendingWebPermissionRequest;
   private final ExecutorService io = Executors.newSingleThreadExecutor();
+
+  private volatile boolean nativeMicRunning = false;
+  private volatile boolean pendingNativeMicStart = false;
+  private AudioRecord audioRecord;
+  private Thread audioThread;
 
   @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
   @Override public void onCreate(Bundle b) {
@@ -44,8 +56,8 @@ public class MainActivity extends Activity {
     webView.getSettings().setAllowFileAccess(true);
     webView.getSettings().setAllowContentAccess(true);
     webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
-
     webView.setWebViewClient(new WebViewClient());
+
     webView.setWebChromeClient(new WebChromeClient() {
       @Override public void onPermissionRequest(PermissionRequest request) {
         runOnUiThread(() -> {
@@ -56,12 +68,10 @@ public class MainActivity extends Activity {
               break;
             }
           }
-
           if (!wantsAudio) {
             request.deny();
             return;
           }
-
           if (android.os.Build.VERSION.SDK_INT < 23 ||
               checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
             request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
@@ -89,9 +99,6 @@ public class MainActivity extends Activity {
 
     webView.addJavascriptInterface(new NativeBridge(), "WellNative");
     setContentView(webView);
-
-    // Load the bundled UI under a secure HTTPS origin instead of file://.
-    // Android WebView/Chromium can reject getUserMedia() on file origins on some devices.
     loadUiFromSecureOrigin();
   }
 
@@ -105,9 +112,31 @@ public class MainActivity extends Activity {
       while ((line = reader.readLine()) != null) html.append(line).append('\n');
       reader.close();
 
+      String nativePatch =
+          "<script>(function(){" +
+          "const oldStop=window.stopSource;" +
+          "window.stopSource=function(){try{WellNative.stopNativeMic()}catch(e){};if(oldStop)oldStop();};" +
+          "window.startMic=async function(){window.stopSource();try{" +
+          "currentSource='mic';document.querySelectorAll('.inputsrc button').forEach(b=>b.classList.remove('active'));" +
+          "$('micBtn').classList.add('active');$('genControls').classList.add('hidden');" +
+          "log('INPUT NATIVE LIVE MIC');WellNative.startNativeMic();" +
+          "}catch(e){log('NATIVE MIC ERROR '+e);toast('เปิดไมค์ไม่ได้');}};" +
+          "window.onNativeMicStarted=function(){toast('LIVE MIC พร้อมใช้งาน');log('NATIVE MIC STARTED 48 kHz');};" +
+          "window.onNativeMicError=function(msg){$('dbfs').textContent='-∞';$('peakHz').textContent='—';$('crest').textContent='—';log('NATIVE MIC ERROR '+msg);toast('ไมค์ผิดพลาด: '+msg);};" +
+          "window.onNativeAudio=function(d){try{" +
+          "$('dbfs').textContent=Number(d.dbfs).toFixed(1);$('peakHz').textContent=d.peakHz>0?Math.round(d.peakHz):'—';" +
+          "$('crest').textContent=Number(d.crest).toFixed(1);let simgr=Math.max(0,(Number(d.dbfs)+18)*.55);$('gr').textContent=simgr.toFixed(1);" +
+          "if(window.feedbackWatch)feedbackWatch(Number(d.peakHz),Number(d.strength),Number(d.dbfs));" +
+          "let c=$('rta'),g=c.getContext('2d'),w=c.width,h=c.height,b=d.bins||[];g.clearRect(0,0,w,h);" +
+          "g.strokeStyle='#162235';g.lineWidth=1;for(let i=0;i<8;i++){let y=i*h/8;g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}" +
+          "if(b.length){g.beginPath();for(let x=0;x<w;x++){let idx=Math.min(b.length-1,Math.floor(x/w*b.length));let v=Math.max(0,Math.min(1,Number(b[idx])));let y=h-v*h;if(x===0)g.moveTo(x,y);else g.lineTo(x,y);}g.strokeStyle='#52cfff';g.lineWidth=2;g.stroke();}" +
+          "}catch(e){}};" +
+          "})();</script>";
+
+      String patched = html.toString().replace("</body>", nativePatch + "</body>");
       webView.loadDataWithBaseURL(
           "https://wellassistant.local/",
-          html.toString(),
+          patched,
           "text/html",
           "UTF-8",
           null
@@ -133,16 +162,21 @@ public class MainActivity extends Activity {
       boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
       PermissionRequest request = pendingWebPermissionRequest;
       pendingWebPermissionRequest = null;
-
       if (request != null) {
         if (granted) request.grant(new String[]{PermissionRequest.RESOURCE_AUDIO_CAPTURE});
         else request.deny();
       }
-
-      final String js = granted
-          ? "window.onNativeMicPermission && window.onNativeMicPermission(true)"
-          : "window.onNativeMicPermission && window.onNativeMicPermission(false)";
-      runOnUiThread(() -> webView.evaluateJavascript(js, null));
+      runOnUiThread(() -> webView.evaluateJavascript(
+          granted ? "window.onNativeMicPermission&&window.onNativeMicPermission(true)" :
+              "window.onNativeMicPermission&&window.onNativeMicPermission(false)", null
+      ));
+      if (granted && pendingNativeMicStart) {
+        pendingNativeMicStart = false;
+        startNativeMicInternal();
+      } else if (!granted) {
+        pendingNativeMicStart = false;
+        nativeMicError("ไม่ได้รับอนุญาตใช้ไมโครโฟน");
+      }
     }
   }
 
@@ -150,12 +184,16 @@ public class MainActivity extends Activity {
     super.onActivityResult(requestCode, resultCode, data);
     if (requestCode == REQ_FILE && fileCallback != null) {
       Uri[] result = null;
-      if (resultCode == RESULT_OK && data != null && data.getData() != null) {
-        result = new Uri[]{data.getData()};
-      }
+      if (resultCode == RESULT_OK && data != null && data.getData() != null) result = new Uri[]{data.getData()};
       fileCallback.onReceiveValue(result);
       fileCallback = null;
     }
+  }
+
+  @Override protected void onDestroy() {
+    stopNativeMicInternal();
+    io.shutdownNow();
+    super.onDestroy();
   }
 
   @Override public void onBackPressed() {
@@ -191,13 +229,27 @@ public class MainActivity extends Activity {
       runOnUiThread(() -> {
         if (android.os.Build.VERSION.SDK_INT < 23 ||
             checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-          webView.evaluateJavascript(
-              "window.onNativeMicPermission && window.onNativeMicPermission(true)", null
-          );
+          webView.evaluateJavascript("window.onNativeMicPermission&&window.onNativeMicPermission(true)", null);
         } else {
           requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_MIC);
         }
       });
+    }
+
+    @JavascriptInterface public void startNativeMic() {
+      runOnUiThread(() -> {
+        if (android.os.Build.VERSION.SDK_INT >= 23 &&
+            checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+          pendingNativeMicStart = true;
+          requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_MIC);
+        } else {
+          startNativeMicInternal();
+        }
+      });
+    }
+
+    @JavascriptInterface public void stopNativeMic() {
+      stopNativeMicInternal();
     }
 
     @JavascriptInterface public void openAppSettings() {
@@ -208,15 +260,247 @@ public class MainActivity extends Activity {
     }
   }
 
+  @SuppressLint("MissingPermission")
+  private synchronized void startNativeMicInternal() {
+    if (nativeMicRunning) return;
+    try {
+      int min = AudioRecord.getMinBufferSize(
+          SAMPLE_RATE,
+          AudioFormat.CHANNEL_IN_MONO,
+          AudioFormat.ENCODING_PCM_16BIT
+      );
+      if (min <= 0) min = FFT_SIZE * 2;
+      int bufferBytes = Math.max(min * 2, FFT_SIZE * 4);
+      audioRecord = new AudioRecord(
+          MediaRecorder.AudioSource.MIC,
+          SAMPLE_RATE,
+          AudioFormat.CHANNEL_IN_MONO,
+          AudioFormat.ENCODING_PCM_16BIT,
+          bufferBytes
+      );
+      if (audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
+        try { audioRecord.release(); } catch (Exception ignored) {}
+        audioRecord = null;
+        nativeMicError("AudioRecord เริ่มต้นไม่สำเร็จ");
+        return;
+      }
+      audioRecord.startRecording();
+      nativeMicRunning = true;
+      runOnUiThread(() -> webView.evaluateJavascript(
+          "window.onNativeMicStarted&&window.onNativeMicStarted()", null
+      ));
+      audioThread = new Thread(this::audioLoop, "WellNativeAudio");
+      audioThread.start();
+    } catch (Exception e) {
+      nativeMicRunning = false;
+      nativeMicError(e.getClass().getSimpleName() + ": " + safeMsg(e.getMessage()));
+    }
+  }
+
+  private synchronized void stopNativeMicInternal() {
+    nativeMicRunning = false;
+    AudioRecord r = audioRecord;
+    audioRecord = null;
+    if (r != null) {
+      try { r.stop(); } catch (Exception ignored) {}
+      try { r.release(); } catch (Exception ignored) {}
+    }
+    Thread t = audioThread;
+    audioThread = null;
+    if (t != null && t != Thread.currentThread()) {
+      try { t.join(150); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+    }
+  }
+
+  private void audioLoop() {
+    short[] buffer = new short[FFT_SIZE];
+    long lastUi = 0;
+    while (nativeMicRunning) {
+      AudioRecord r = audioRecord;
+      if (r == null) break;
+      int n;
+      try {
+        n = r.read(buffer, 0, buffer.length);
+      } catch (Exception e) {
+        nativeMicError("อ่านเสียงไม่สำเร็จ: " + safeMsg(e.getMessage()));
+        break;
+      }
+      if (n <= 0) continue;
+      long now = System.currentTimeMillis();
+      if (now - lastUi < 90) continue;
+      lastUi = now;
+      try {
+        NativeAudioFrame frame = analyzePcm(buffer, n);
+        pushNativeAudio(frame);
+      } catch (Exception ignored) {}
+    }
+  }
+
+  private static NativeAudioFrame analyzePcm(short[] pcm, int count) {
+    int n = 1;
+    while ((n << 1) <= count && (n << 1) <= FFT_SIZE) n <<= 1;
+    if (n < 256) n = Math.min(256, count);
+
+    double sumSq = 0.0;
+    double peak = 0.0;
+    for (int i = 0; i < count; i++) {
+      double x = pcm[i] / 32768.0;
+      sumSq += x * x;
+      double a = Math.abs(x);
+      if (a > peak) peak = a;
+    }
+    double rms = Math.sqrt(sumSq / Math.max(1, count));
+    double dbfs = 20.0 * Math.log10(Math.max(rms, 1e-9));
+    double crest = 20.0 * Math.log10(Math.max(peak, 1e-9) / Math.max(rms, 1e-9));
+
+    if ((n & (n - 1)) != 0) {
+      int p = 1;
+      while ((p << 1) < n) p <<= 1;
+      n = p;
+    }
+
+    double[] re = new double[n];
+    double[] im = new double[n];
+    for (int i = 0; i < n; i++) {
+      double window = 0.5 - 0.5 * Math.cos((2.0 * Math.PI * i) / (n - 1));
+      re[i] = (pcm[i] / 32768.0) * window;
+    }
+    fft(re, im);
+
+    int half = n / 2;
+    double peakMag = 0.0;
+    int peakBin = 0;
+    for (int i = 1; i < half; i++) {
+      double hz = i * (double) SAMPLE_RATE / n;
+      if (hz < 70 || hz > 20000) continue;
+      double mag = Math.hypot(re[i], im[i]);
+      if (mag > peakMag) {
+        peakMag = mag;
+        peakBin = i;
+      }
+    }
+    double peakHz = peakBin * (double) SAMPLE_RATE / n;
+
+    final int bands = 96;
+    double[] out = new double[bands];
+    double fMin = 50.0;
+    double fMax = 20000.0;
+    for (int b = 0; b < bands; b++) {
+      double t0 = b / (double) bands;
+      double t1 = (b + 1) / (double) bands;
+      double lo = fMin * Math.pow(fMax / fMin, t0);
+      double hi = fMin * Math.pow(fMax / fMin, t1);
+      int i0 = Math.max(1, (int) Math.floor(lo * n / SAMPLE_RATE));
+      int i1 = Math.min(half - 1, Math.max(i0, (int) Math.ceil(hi * n / SAMPLE_RATE)));
+      double m = 0.0;
+      for (int i = i0; i <= i1; i++) m = Math.max(m, Math.hypot(re[i], im[i]));
+      double ref = n * 0.25;
+      double bandDb = 20.0 * Math.log10(Math.max(m / ref, 1e-9));
+      out[b] = clamp((bandDb + 90.0) / 90.0, 0.0, 1.0);
+    }
+
+    double peakNormDb = 20.0 * Math.log10(Math.max(peakMag / (n * 0.25), 1e-9));
+    double strength = clamp((peakNormDb + 90.0) / 90.0 * 255.0, 0.0, 255.0);
+    return new NativeAudioFrame(dbfs, crest, peakHz, strength, out);
+  }
+
+  private static void fft(double[] re, double[] im) {
+    int n = re.length;
+    for (int i = 1, j = 0; i < n; i++) {
+      int bit = n >> 1;
+      for (; (j & bit) != 0; bit >>= 1) j ^= bit;
+      j ^= bit;
+      if (i < j) {
+        double tr = re[i]; re[i] = re[j]; re[j] = tr;
+        double ti = im[i]; im[i] = im[j]; im[j] = ti;
+      }
+    }
+    for (int len = 2; len <= n; len <<= 1) {
+      double ang = -2.0 * Math.PI / len;
+      double wLenR = Math.cos(ang);
+      double wLenI = Math.sin(ang);
+      for (int i = 0; i < n; i += len) {
+        double wr = 1.0, wi = 0.0;
+        for (int j = 0; j < len / 2; j++) {
+          int u = i + j;
+          int v = i + j + len / 2;
+          double vr = re[v] * wr - im[v] * wi;
+          double vi = re[v] * wi + im[v] * wr;
+          re[v] = re[u] - vr;
+          im[v] = im[u] - vi;
+          re[u] += vr;
+          im[u] += vi;
+          double nwr = wr * wLenR - wi * wLenI;
+          wi = wr * wLenI + wi * wLenR;
+          wr = nwr;
+        }
+      }
+    }
+  }
+
+  private void pushNativeAudio(NativeAudioFrame f) {
+    StringBuilder sb = new StringBuilder(900);
+    sb.append('{');
+    sb.append("\"dbfs\":").append(fmt(f.dbfs)).append(',');
+    sb.append("\"crest\":").append(fmt(f.crest)).append(',');
+    sb.append("\"peakHz\":").append(fmt(f.peakHz)).append(',');
+    sb.append("\"strength\":").append(fmt(f.strength)).append(',');
+    sb.append("\"bins\":[");
+    for (int i = 0; i < f.bins.length; i++) {
+      if (i > 0) sb.append(',');
+      sb.append(fmt(f.bins[i]));
+    }
+    sb.append("]}");
+    String json = sb.toString();
+    runOnUiThread(() -> webView.evaluateJavascript(
+        "window.onNativeAudio&&window.onNativeAudio(" + json + ")", null
+    ));
+  }
+
+  private void nativeMicError(String msg) {
+    String safe = jsQuote(safeMsg(msg));
+    runOnUiThread(() -> webView.evaluateJavascript(
+        "window.onNativeMicError&&window.onNativeMicError(" + safe + ")", null
+    ));
+  }
+
   private void callback(boolean ok, String msg) {
     String safe = msg == null ? "" : msg
         .replace("\\", "\\\\")
         .replace("'", "\\'")
         .replace("\n", " ");
     runOnUiThread(() -> webView.evaluateJavascript(
-        "window.onNativeOsc && window.onNativeOsc(" + ok + ", '" + safe + "')",
-        null
+        "window.onNativeOsc&&window.onNativeOsc(" + ok + ", '" + safe + "')", null
     ));
+  }
+
+  private static String fmt(double v) {
+    if (!Double.isFinite(v)) return "0";
+    return String.format(Locale.US, "%.4f", v);
+  }
+
+  private static double clamp(double v, double lo, double hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  private static String safeMsg(String s) {
+    return s == null || s.trim().isEmpty() ? "Unknown" : s.replace('\n', ' ');
+  }
+
+  private static String jsQuote(String s) {
+    return "'" + s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ") + "'";
+  }
+
+  private static class NativeAudioFrame {
+    final double dbfs, crest, peakHz, strength;
+    final double[] bins;
+    NativeAudioFrame(double dbfs, double crest, double peakHz, double strength, double[] bins) {
+      this.dbfs = dbfs;
+      this.crest = crest;
+      this.peakHz = peakHz;
+      this.strength = strength;
+      this.bins = bins;
+    }
   }
 
   private static byte[] oscString(String s) {
@@ -231,12 +515,10 @@ public class MainActivity extends Activity {
   private static byte[] encodeOsc(String address, String type, String value) {
     byte[] a = oscString(address);
     if ("none".equals(type)) return a;
-
     String tag;
     if ("int".equals(type)) tag = ",i";
     else if ("string".equals(type)) tag = ",s";
     else tag = ",f";
-
     byte[] t = oscString(tag);
     byte[] v;
     if ("int".equals(type)) {
@@ -246,7 +528,6 @@ public class MainActivity extends Activity {
     } else {
       v = ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putFloat(Float.parseFloat(value)).array();
     }
-
     byte[] out = new byte[a.length + t.length + v.length];
     System.arraycopy(a, 0, out, 0, a.length);
     System.arraycopy(t, 0, out, a.length, t.length);
