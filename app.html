@@ -27,6 +27,28 @@
     `async function logoutNow(){try{await call(API.core,{action:'logout'})}catch{}token='';profile=null;sessionStorage.clear();localStorage.removeItem('well_admin_remember_token');location.reload()}\nwindow.logoutNow=logoutNow;\n`
   );
 
+  const patch=`<script>
+(function(){
+  const originalSwitchView=window.switchView;
+  window.copyLicense=async function(id){
+    const l=licenses.find(x=>x.id===id);if(!l)return;
+    const value=l.license_key||l.activation_email||'';
+    if(!value){toast('ไม่มี License ให้คัดลอก');return}
+    try{await navigator.clipboard.writeText(String(value));toast('คัดลอก License แล้ว')}
+    catch{const t=document.createElement('textarea');t.value=String(value);document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();toast('คัดลอก License แล้ว')}
+  };
+  window.licenseRows=function(ls){return ls.map(l=>{const d=daysLeft(l.expires_at),status=l.enabled===false?'<span class="badge bad">ปิด</span>':d!==null&&d<0?'<span class="badge bad">หมดอายุ</span>':d!==null&&d<=7?'<span class="badge warn">ใกล้หมดอายุ</span>':'<span class="badge good">ใช้งาน</span>';return '<tr><td><b>'+esc(l.customer_name||'-')+'</b><br><span class="muted">License: '+esc(l.license_key||'-')+'</span></td><td>'+esc(l.mt5_login||l.activation_email||'-')+'</td><td>'+esc(l.broker||l.product_code||'-')+'<br><span class="muted">'+esc(l.server||'')+'</span></td><td>'+esc(l.expires_at||'-')+'</td><td>'+status+'</td><td><div class="row-actions"><button class="btn small" onclick="copyLicense(\''+String(l.id).replace(/'/g,"\\'")+'\')">คัดลอก License</button><button class="btn small" onclick="openLicenseModal(\''+String(l.id).replace(/'/g,"\\'")+'\')">แก้ไข</button><button class="btn small '+(l.enabled===false?'primary':'')+'" onclick="toggleLicense(\''+String(l.id).replace(/'/g,"\\'")+'\','+(l.enabled===false)+')">'+(l.enabled===false?'เปิด':'ปิด')+'</button></div></td></tr>'}).join('')||'<tr><td colspan="6" class="muted">ไม่มี License ในโปรเจกต์นี้</td></tr>'};
+  window.renderCustomers=function(){const ls=filteredLicenses();const ids=new Set(ls.map(x=>x.customer_id).filter(Boolean));const names=new Set(ls.map(x=>x.customer_name).filter(Boolean));const rows=customers.filter(c=>ids.has(c.id)||names.has(c.name)).map(c=>({...c,license_count:ls.filter(l=>(l.customer_id&&l.customer_id===c.id)||(!l.customer_id&&l.customer_name===c.name)).length}));$('#view-customers').innerHTML='<div class="panel"><div class="toolbar"><input id="customerSearch" class="input search" placeholder="ค้นหาลูกค้า"><button class="btn primary" onclick="openCustomerModal()">+ เพิ่มลูกค้า</button></div><div class="table-wrap"><table><thead><tr><th>ชื่อลูกค้า</th><th>โทร</th><th>Email</th><th>LINE</th><th>License</th><th>จัดการ</th></tr></thead><tbody id="customerRows">'+customerRows(rows)+'</tbody></table></div></div>';$('#customerSearch').oninput=e=>{const q=e.target.value.toLowerCase();$('#customerRows').innerHTML=customerRows(rows.filter(x=>JSON.stringify(x).toLowerCase().includes(q)))}};
+  window.selectProject=function(id,keepView=false){const activeView=$('.nav button.active')?.dataset.view||'dashboard';currentProjectId=id;localStorage.setItem('well_project',id);renderProjectSelect();renderAll();window.switchView(keepView?activeView:'dashboard')};
+  window.switchView=function(name){originalSwitchView(name);$('#newProjectBtn')?.classList.toggle('hidden',name==='licenses')};
+  $$('.nav button').forEach(b=>b.onclick=()=>window.switchView(b.dataset.view));
+  if($('#projectSelect'))$('#projectSelect').onchange=e=>window.selectProject(e.target.value,true);
+  renderAll();
+  const active=$('.nav button.active')?.dataset.view||'dashboard';window.switchView(active);
+})();
+<\/script>`;
+  html=html.replace('</body>',patch+'</body>');
+
   document.open();document.write(html);document.close();
 })().catch(e=>{document.body.innerHTML='<div class="loading">เปิดระบบไม่สำเร็จ<br>'+String(e.message||e)+'</div>'});
 </script></body></html>
