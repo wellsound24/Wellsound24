@@ -1,4 +1,4 @@
-name: Build Well Auto Feedback APK
+name: Build Well Auto EQ Pro APK
 on:
   push:
     branches: [ well-auto-feedback-apk ]
@@ -19,9 +19,9 @@ jobs:
         working-directory: well-auto-feedback-android
         run: gradle :app:assembleDebug --stacktrace
       - name: Rename APK
-        run: cp well-auto-feedback-android/app/build/outputs/apk/debug/app-debug.apk WellAutoFeedbackM32R_v3.1_License.apk
+        run: cp well-auto-feedback-android/app/build/outputs/apk/debug/app-debug.apk Well_Auto_EQ_Pro_v3.1_License.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: WellAutoFeedbackM32R_v3.1_License
-          path: WellAutoFeedbackM32R_v3.1_License.apk
+          name: Well_Auto_EQ_Pro_v3.1_License
+          path: Well_Auto_EQ_Pro_v3.1_License.apk
           if-no-files-found: error
