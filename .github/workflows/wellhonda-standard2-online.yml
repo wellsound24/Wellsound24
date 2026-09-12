@@ -1,0 +1,72 @@
+name: Build Well Honda Standard 2 Online R5
+
+on:
+  push:
+    branches:
+      - wellhonda-standard2-mobile
+    paths:
+      - 'wellhonda-standard2-online/**'
+      - '.github/workflows/wellhonda-standard2-online.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build fresh APK
+        working-directory: wellhonda-standard2-online
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Prepare APK
+        run: cp wellhonda-standard2-online/app/build/outputs/apk/debug/app-debug.apk WellHondaOBD_Standard2_Online_R5.apk
+
+      - name: Verify APK
+        run: |
+          BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BUILD_TOOLS/aapt" dump badging WellHondaOBD_Standard2_Online_R5.apk | tee apk-badging.txt
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs WellHondaOBD_Standard2_Online_R5.apk | tee apk-signature.txt
+          grep -q "package: name='com.wellhonda.obdpro.standard2.online'" apk-badging.txt
+          grep -q "Verified using v2 scheme (APK Signature Scheme v2): true" apk-signature.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WellHondaOBD_Standard2_Online_R5_APK
+          path: WellHondaOBD_Standard2_Online_R5.apk
+          if-no-files-found: error
+
+      - name: Publish direct download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin wellhonda-standard2-mobile-release
+          rm -rf /tmp/wellhonda-release
+          git worktree add /tmp/wellhonda-release origin/wellhonda-standard2-mobile-release
+          mkdir -p /tmp/wellhonda-release/releases
+          cp WellHondaOBD_Standard2_Online_R5.apk /tmp/wellhonda-release/releases/WellHondaOBD_Standard2_Online_R5.apk
+          cd /tmp/wellhonda-release
+          git add releases/WellHondaOBD_Standard2_Online_R5.apk
+          git commit -m "Publish fresh Standard 2 Online R5 APK" || true
+          git push origin HEAD:wellhonda-standard2-mobile-release
