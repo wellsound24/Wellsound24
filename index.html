@@ -11,7 +11,7 @@
     .card{width:min(460px,100%);background:#111827;border:1px solid #263244;border-radius:18px;padding:22px;box-sizing:border-box}
     .row{display:flex;align-items:center;gap:12px}
     .mark{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;background:#22c55e;color:#05200f;font-weight:900;font-size:24px}
-    h1{font-size:24px;margin:0 0 4px} p{color:#94a3b8;margin:10px 0 0;line-height:1.5}
+    h1{font-size:24px;margin:0 0 4px}.muted{color:#94a3b8}
     .spin{width:18px;height:18px;border:3px solid #334155;border-top-color:#22c55e;border-radius:50%;animation:s .8s linear infinite;margin-top:18px}
     @keyframes s{to{transform:rotate(360deg)}}
     .err{display:none;color:#fecaca;background:#321318;border:1px solid #7f1d1d;border-radius:10px;padding:12px;margin-top:16px;white-space:pre-line}
@@ -21,7 +21,7 @@
 <body>
   <div class="boot" id="boot">
     <div class="card">
-      <div class="row"><div class="mark">W</div><div><h1>Well License Dashboard</h1><div style="color:#94a3b8">กำลังเปิดระบบ...</div></div></div>
+      <div class="row"><div class="mark">W</div><div><h1>Well License Dashboard</h1><div class="muted">กำลังเปิดระบบ...</div></div></div>
       <div class="spin"></div>
       <div id="err" class="err"></div>
       <button id="retry" style="display:none" onclick="location.reload()">ลองใหม่</button>
@@ -30,24 +30,85 @@
 <script>
 (async()=>{
   const EDGE="https://sjcxywxixgrpdgeqaepk.supabase.co/functions/v1/well-license-dashboard";
-  const EXTRA_B64="CigoKT0+IHsKICBpZiAod2luZG93Ll9fV0VMTF9FWFRSQV9WNF9fKSByZXR1cm47CiAgd2luZG93Ll9fV0VMTF9FWFRSQV9WNF9fID0gdHJ1ZTsKCiAgbGV0IGVkaXRpbmdDdXN0b21lcklkID0gIiI7CgogIGRvY3VtZW50LmFkZEV2ZW50TGlzdGVuZXIoImNsaWNrIiwgKGUpID0+IHsKICAgIGNvbnN0IGVkaXQgPSBlLnRhcmdldC5jbG9zZXN0ICYmIGUudGFyZ2V0LmNsb3Nlc3QoIltkYXRhLWVkaXQtY3VzdG9tZXJdIik7CiAgICBpZiAoZWRpdCkgZWRpdGluZ0N1c3RvbWVySWQgPSBlZGl0LmdldEF0dHJpYnV0ZSgiZGF0YS1lZGl0LWN1c3RvbWVyIikgfHwgIiI7CiAgfSwgdHJ1ZSk7CgogIGFzeW5jIGZ1bmN0aW9uIGN1c3RvbUFwaShhY3Rpb24sIHBheWxvYWQ9e30pIHsKICAgIGNvbnN0IGZuID0gd2luZG93Ll9fV0VMTF9GTiB8fCAiaHR0cHM6Ly9zamN4eXd4aXhncnBkZ2VxYWVway5zdXBhYmFzZS5jby9mdW5jdGlvbnMvdjEvd2VsbC1saWNlbnNlLWRhc2hib2FyZCI7CiAgICBjb25zdCB0b2sgPSAodHlwZW9mIHRva2VuICE9PSAidW5kZWZpbmVkIiA/IHRva2VuIDogKGxvY2FsU3RvcmFnZS5nZXRJdGVtKCJ3ZWxsX2FkbWluX3Rva2VuIikgfHwgbG9jYWxTdG9yYWdlLmdldEl0ZW0oInRva2VuIikgfHwgIiIpKTsKICAgIGNvbnN0IHIgPSBhd2FpdCBmZXRjaChmbiArICI/Y3VzdG9tPTEiLCB7CiAgICAgIG1ldGhvZDogIlBPU1QiLAogICAgICBoZWFkZXJzOiB7ImNvbnRlbnQtdHlwZSI6ImFwcGxpY2F0aW9uL2pzb24iLCJhdXRob3JpemF0aW9uIjoiQmVhcmVyICIrdG9rfSwKICAgICAgYm9keTogSlNPTi5zdHJpbmdpZnkoe2FjdGlvbiwgLi4ucGF5bG9hZH0pCiAgICB9KTsKICAgIGNvbnN0IGogPSBhd2FpdCByLmpzb24oKS5jYXRjaCgoKT0+KHtvazpmYWxzZSxlcnJv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zKCkgewogICAgbGV0IGxpc3QgPSBbXTsKICAgIHRyeSB7IGlmICh0eXBlb2YgbGljZW5zZXMgIT09ICJ1bmRlZmluZWQiICYmIEFycmF5LmlzQXJyYXkobGljZW5zZXMpKSBsaXN0ID0gbGljZW5zZXM7IH0gY2F0Y2gge30KICAgIGNvbnN0IHZpZXcgPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgidmlldy1saWNlbnNlcyIpOwogICAgaWYgKCF2aWV3IHx8ICFsaXN0Lmxlbmd0aCkgcmV0dXJuOwoKICAgIGxldCBib3ggPSBkb2N1bWVudC5nZXRFbGVtZW50QnlJZCgid2VsbExpY2Vuc2VBbGVydHMiKTsKICAgIGlmICghYm94KSB7CiAgICAgIGJveCA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoImRpdiIpOwogICAgICBib3guaWQgPSAid2VsbExpY2Vuc2VBbGVydHMiOwogICAgICBib3guY2xhc3NOYW1lID0gInBhbmVsIjsKICAgICAgYm94LnN0eWxlLm1hcmdpbkJvdHRvbSA9ICIxNHB4IjsKICAgICAgY29uc3QgdXJsYmFyID0gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoInByb2plY3RVcmxCYXIiKTsKICAgICAgaWYgKHVybGJhciAmJiB1cmxiYXIucGFyZW50Tm9kZSA9PT0gdmlldykgdXJsYmFyLmFmdGVyKGJveCk7CiAgICAgIGVsc2Ugdmlldy5wcmVwZW5kKGJveCk7CiAgICB9CgogICAgY29uc3QgYmFkID0gbGlzdC5maWx0ZXIoeCA9PiB4LmVuYWJsZWQgPT09IGZhbHNlIHx8IGRheXNMZWZ0KHguZXhwaXJlc19hdCkgPCAwKTsKICAgIGNvbnN0IHNvb24gPSBsaXN0LmZpbHRlcih4ID0+IHsKICAgICAgY29uc3QgZCA9IGRheXNMZWZ0KHguZXhwaXJlc19hdCk7CiAgICAgIHJldHVybiB4LmVuYWJsZWQgIT09IGZhbHNlICYmIGQgIT09IG51bGwgJiYgZCA+PSAwICYmIGQgPD0gNzsKICAgIH0pOwoKICAgIGlmICghYmFkLmxlbmd0aCAmJiAhc29vbi5sZW5ndGgpIHsKICAgICAgYm94LmlubmVySFRNTCA9ICc8ZGl2IGNsYXNzPSJwYW5lbC1oZWFkIj48ZGl2PjxkaXYgY2xhc3M9InBhbmVsLXRpdGxlIj7guKrguJbguLLguJnguLDgIExpY2Vuc2U8L2Rpdj48ZGl2IGNsYXNzPSJwYW5lbC1zdWIiPuC5hOC4oeC5iOC5oeC4o+C4oeC4teC4nCBMaWNlbnNlIOC4l+C4teC5iOC4q+C4oeC4lOC4reC4reC4suC4ouC4uOC4q+C4oOC4teC4reC5gOC4quC4teC4ouC4h+C5gOC4o+C5ieC4suC4q+C4oeC4lOC4reC4suC4ouC4uOC5gOC4m+C4suC4ouC5g+C4meC4tC43IOC4p+C4seC4mPC9kaXY+PC9kaXY+PHNwYW4gY2xhc3M9InBpbGwiPuC4m+C4geC4leC4tTwvc3Bhbj48L2Rpdj4nOwogICAgICByZXR1cm47CiAgICB9CiAgICBjb25zdCBpdGVtcyA9IFsKICAgICAgLi4uYmFkLm1hcCh4ID0+ICh7eCxsZXZlbDoiYmFkIix0eHQ6KHguZW5hYmxlZD09PWZhbHNlPyLguJvguLTguJTguYPguIrguYnguIfguLLguJkiOiLguKvguKHguJTguK3guLLguKLigJ0ifSkpLAogICAgICAuLi5zb29uLm1hcCh4ID0+ICh7eCxsZXZlbDoid2FybiIsdHh0OiLguYDguKvguKXguLfguK0gIitkYXlzTGVmdCh4LmV4cGlyZXNfYXQpKyIg4Lin4Lix4LiZIn0pKQogICAgXTsKICAgIGJveC5pbm5lckhUTUwgPSAnPGRpdiBjbGFzcz0icGFuZWwtaGVhZCI+PGRpdj48ZGl2IGNsYXNzPSJwYW5lbC10aXRsZSI+4pqgIOC5geC4i+C5ieC4h+C5gOC4leC4t+C4meCBMaWNlbnNlPC9kaXY+PGRpdiBjbGFzcz0icGFuZWwtc3ViIj7guKvguKHguJTguK3guLLguKIgLyDguJvguLTguJTguYPguIrguYnguIfguLLguJkgLyDguYPguIHguKXguYnguKvguKHguJTguK3guLLguKLguKDguLLguKLguYPguJkgNyDguKfguLHguJk8L2Rpdj48L2Rpdj48c3BhbiBjbGFzcz0icGlsbCI+JytpdGVtcy5sZW5ndGgrJyDguKPguLLguKLguIHguLLguKM8L3NwYW4+PC9kaXY+JyArCiAgICAgICc8ZGl2IGNsYXNzPSJzdGFjayI+JyArIGl0ZW1zLm1hcChpID0+IHsKICAgICAgICBjb25zdCBuID0gaS54LmN1c3RvbWVyX25hbWUgfHwgaS54Lm5hbWUgfHwgaS54Lm10NV9sb2dpbiB8fCBpLnguYWN0aXZhdGlvbl9lbWFpbCB8fCAiTGljZW5zZSI7CiAgICAgICAgcmV0dXJuICc8ZGl2IGNsYXNzPSJiYWNrdXAtY2FyZCI+PGRpdiBjbGFzcz0iYmFja3VwLW1ldGEiPjxiPicrU3RyaW5nKG4pLnJlcGxhY2UoL1s8PiYiXS9nLGM9Pih7IjwiOiImbHQ7IiwiPiI6IiZndDsiLCImIjoiJmFtcDsiLCJcIiI6IiZxdW90OyJ9W2NdKSkrJzwvYj48ZGl2PicsaS50eHQsJyDigKIgJyw oaS54LmV4cGlyZXNfYXR8fCItIiksJzwvZGl2PjwvZGl2Pic7CiAgICAgIH0pLmpvaW4oIiIpICsgJzwvZGl2Pic7CiAgfQoKICBjb25zdCBvYnMgPSBuZXcgTXV0YXRpb25PYnNlcnZlcigoKSA9PiB7CiAgICBhZGREZWxldGVJbnNpZGVFZGl0TW9kYWwoKTsKICAgIHJlZnJlc2hMaWNlbnNlQWxlcnRzKCk7CiAgfSk7CiAgb2JzLm9ic2VydmUoZG9jdW1lbnQuZG9jdW1lbnRFbGVtZW50LCB7c3VidHJlZTp0cnVlLCBjaGlsZExpc3Q6dHJ1ZX0pOwoKICBjb25zdCB0aW1lciA9IHNldEludGVydmFsKCgpID0+IHsKICAgIGFkZERlbGV0ZUluc2lkZUVkaXRNb2RhbCgpOwogICAgcmVmcmVzaExpY2Vuc2VBbGVydHMoKTsKICAgIGlmIChkb2N1bWVudC5yZWFkeVN0YXRlID09PSAiY29tcGxldGUiKSB7CiAgICAgIC8vIEtlZXAgaXQgYWxpdmUgYmVjYXVzZSB2aWV3cyBhcmUgcmVuZGVyZWQgZHluYW1pY2FsbHkuCiAgICB9CiAgfSwgMTIwMCk7Cn0pKCk7Cg==";
+  const EXTRA=`(() => {
+    let editingCustomerId='';
+    document.addEventListener('click', e => {
+      const b=e.target.closest && e.target.closest('[data-edit-customer]');
+      if(b) editingCustomerId=b.getAttribute('data-edit-customer')||'';
+    }, true);
+
+    async function callCustom(action,payload={}){
+      const tok=(typeof token!=='undefined'?token:(localStorage.getItem('well_admin_token')||localStorage.getItem('token')||''));
+      const r=await fetch(window.__WELL_FN+'?custom=1',{
+        method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+tok},
+        body:JSON.stringify({action,...payload})
+      });
+      const j=await r.json().catch(()=>({ok:false,error:'server_error'}));
+      if(!r.ok||!j.ok) throw new Error(j.error||'server_error');
+      return j;
+    }
+
+    function addDeleteButton(){
+      if(!editingCustomerId) return;
+      const nodes=[...document.querySelectorAll('div,section,dialog')].filter(el=>{
+        const s=getComputedStyle(el); const txt=el.textContent||'';
+        return s.display!=='none' && s.visibility!=='hidden' && txt.includes('แก้ไขลูกค้า');
+      }).sort((a,b)=>(a.textContent||'').length-(b.textContent||'').length);
+      const modal=nodes[0];
+      if(!modal || modal.querySelector('[data-delete-customer-modal]')) return;
+      const btn=document.createElement('button');
+      btn.type='button'; btn.className='btn danger'; btn.dataset.deleteCustomerModal='1';
+      btn.textContent='ลบลูกค้า';
+      btn.style.cssText='background:#dc2626;color:#fff;border-color:#dc2626;margin-left:8px';
+      const area=[...modal.querySelectorAll('div')].reverse().find(x=>x.querySelector('button'))||modal;
+      area.appendChild(btn);
+      btn.onclick=async()=>{
+        let name='';
+        try{ if(typeof customers!=='undefined'){const c=customers.find(x=>String(x.id)===String(editingCustomerId));name=c?.name||c?.customer_name||'';} }catch{}
+        if(!confirm('ยืนยันลบลูกค้า'+(name?' “'+name+'”':'')+' ?\nLicense เดิมจะยังอยู่')) return;
+        btn.disabled=true; btn.textContent='กำลังลบ...';
+        try{
+          await callCustom('delete_customer',{id:editingCustomerId});
+          if(typeof toast==='function') toast('ลบลูกค้าแล้ว');
+          const close=[...modal.querySelectorAll('button')].find(x=>/ยกเลิก|ปิด/.test(x.textContent||'')); if(close) close.click();
+          editingCustomerId='';
+          if(typeof loadAll==='function') await loadAll();
+        }catch(err){btn.disabled=false;btn.textContent='ลบลูกค้า'; if(typeof toast==='function')toast('ลบลูกค้าไม่สำเร็จ','bad'); else alert('ลบลูกค้าไม่สำเร็จ');}
+      };
+    }
+
+    function renderLicenseWarnings(){
+      const view=document.getElementById('view-licenses');
+      if(!view || typeof licenses==='undefined') return;
+      let box=document.getElementById('licenseWarningBox');
+      if(!box){box=document.createElement('div');box.id='licenseWarningBox';box.className='panel';box.style.marginBottom='14px';view.prepend(box);}
+      const today=new Date();today.setHours(0,0,0,0);
+      const bad=[];
+      for(const l of licenses){
+        const exp=l.expires_at?new Date(String(l.expires_at).slice(0,10)+'T00:00:00'):null;
+        const days=exp?Math.ceil((exp-today)/86400000):null;
+        if(l.enabled===false) bad.push('ปิดใช้งาน: '+(l.customer_name||l.license_key||'-'));
+        else if(days!==null && days<0) bad.push('หมดอายุ: '+(l.customer_name||l.license_key||'-'));
+        else if(days!==null && days<=7) bad.push('ใกล้หมดอายุ '+days+' วัน: '+(l.customer_name||l.license_key||'-'));
+      }
+      box.innerHTML='<div class="panel-head"><div><div class="panel-title">แจ้งเตือน License</div><div class="panel-sub">หมดอายุ / ปิดใช้งาน / ใกล้หมดอายุภายใน 7 วัน</div></div></div>'+
+        (bad.length?'<div class="stack">'+bad.map(x=>'<div class="backup-card" style="border-color:#7f1d1d">'+String(x).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</div>').join('')+'</div>':'<div class="empty">ไม่มี License ที่ต้องแจ้งเตือน</div>');
+    }
+
+    const obs=new MutationObserver(()=>{try{addDeleteButton();renderLicenseWarnings();}catch{}});
+    obs.observe(document.documentElement,{childList:true,subtree:true});
+    setTimeout(()=>{try{addDeleteButton();renderLicenseWarnings();}catch{}},700);
+  })();`;
   try {
     const r=await fetch(EDGE+'?v='+Date.now(),{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     let t=await r.text();
-    t=t.replace(
-      "const FN=location.origin+location.pathname;",
-      "const FN='"+EDGE+"';"
-    );
-    const extra=atob(EXTRA_B64);
-    t=t.replace('</body>','<script>'+extra+'<\\/script></body>');
-    document.open();
-    document.write(t);
-    document.close();
+    t=t.replace("const FN=location.origin+location.pathname;","const FN='"+EDGE+"';");
+    t=t.replace('</body>','<script>'+EXTRA.replace(/<\\/script>/gi,'<\\/script>')+'<\\/script></body>');
+    document.open();document.write(t);document.close();
   } catch(e) {
     document.querySelector('.spin').style.display='none';
-    const box=document.getElementById('err');
-    box.style.display='block';
+    const box=document.getElementById('err');box.style.display='block';
     box.textContent='เปิด Dashboard ไม่สำเร็จ\n'+(e&&e.message?e.message:e);
     document.getElementById('retry').style.display='inline-block';
   }
