@@ -1,0 +1,39 @@
+name: Repair UI and add player close
+on:
+  push:
+    paths:
+      - '.github/workflows/repair-add-player-close.yml'
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore last good UI and add close button
+        run: |
+          git show da58f50edb347873c31278ba895142d880857a79:well-assistant-pro-android/app/src/main/assets/index.html > /tmp/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/index.html')
+          s=p.read_text()
+          s=s.replace('.hidden{display:none}', '.playerWrap{display:flex;align-items:center;gap:7px;margin-top:7px}.playerWrap audio{flex:1;min-width:0}.playerClose{width:42px;height:42px;flex:0 0 42px;border-radius:50%;border:2px solid #8a2934;background:#351218;color:#fff;font-size:25px;line-height:34px;font-weight:500}.hidden{display:none}')
+          s=s.replace('<audio id="player" class="hidden" controls loop></audio>', '<div id="playerWrap" class="playerWrap hidden"><audio id="player" controls loop></audio><button id="playerClose" class="playerClose" onclick="closeAudioPlayer()" aria-label="ปิดเครื่องเล่น">×</button></div>')
+          s=s.replace("let p=$('player');if(p){try{p.pause()}catch(e){}}", "let p=$('player');if(p){try{p.pause()}catch(e){}}")
+          s=s.replace("p.classList.remove('hidden');playerNode=ctx.createMediaElementSource(p);", "$('playerWrap').classList.remove('hidden');playerNode=ctx.createMediaElementSource(p);")
+          marker="async function startGenerator()"
+          closefn="function closeAudioPlayer(){let p=$('player');try{p.pause()}catch(e){};try{p.removeAttribute('src');p.load()}catch(e){};stopSource(true);$('playerWrap').classList.add('hidden');$('audioFile').value='';log('AUDIO PLAYER CLOSED');toast('ปิดเครื่องเล่นแล้ว')}\n"
+          s=s.replace(marker, closefn+marker)
+          # Keep player hidden whenever non-file source is selected/stopped by user.
+          s=s.replace("if(userStop){resetMeters();log('INPUT STOPPED');toast('หยุดแหล่งเสียงแล้ว')}}", "if(userStop){if($('playerWrap'))$('playerWrap').classList.add('hidden');resetMeters();log('INPUT STOPPED');toast('หยุดแหล่งเสียงแล้ว')}}")
+          Path('well-assistant-pro-android/app/src/main/assets/index.html').write_text(s)
+          PY
+      - name: Commit repair
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add well-assistant-pro-android/app/src/main/assets/index.html
+          git commit -m "Restore UI and add X close button to audio player"
+          git push
