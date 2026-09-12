@@ -54,35 +54,32 @@ public class MainActivity extends Activity {
             }
         });
 
-        webView.loadUrl("https://welllicensedashboardnewvercel.vercel.app/?android=5");
+        webView.loadUrl("https://welllicensedashboardnewvercel.vercel.app/?android=6");
     }
 
     private void injectStableAndroidPatch(WebView v) {
         String js = "(function(){try{" +
-            "if(window.__wellAndroidV5)return;window.__wellAndroidV5=true;" +
+            "if(window.__wellAndroidV6)return;window.__wellAndroidV6=true;" +
 
-            // Copy License: same visible button, Android-native copy underneath.
+            // Always copy the real generated license key. Email remains a separate identity field.
             "window.copyLicense=function(id){try{" +
                 "var l=licenses.find(function(x){return String(x.id)===String(id)});" +
                 "if(!l){if(typeof toast==='function')toast('ไม่พบ License');return;}" +
-                "var p=(typeof currentProject==='function')?currentProject():null;" +
-                "var value=(p&&p.product_code==='WELL_AUTO_EQ_PRO')?(l.activation_email||''):(l.license_key||'');" +
+                "var value=l.license_key||'';" +
                 "if(!value){if(typeof toast==='function')toast('ไม่มี License ให้คัดลอก');return;}" +
                 "AndroidBridge.copyText(String(value));" +
             "}catch(e){if(typeof toast==='function')toast('คัดลอกไม่สำเร็จ');}};" +
 
-            // Fix row action quoting on Android: encoded IDs keep Copy/Edit/Enable buttons clickable.
+            // Each row shows the real license key in its own field; Email/MT5 stays in the next column.
             "window.licenseRows=function(ls){return (ls||[]).map(function(l){" +
                 "var d=daysLeft(l.expires_at);" +
                 "var status=l.enabled===false?'<span class=\"badge bad\">ปิด</span>':(d!==null&&d<0?'<span class=\"badge bad\">หมดอายุ</span>':(d!==null&&d<=7?'<span class=\"badge warn\">ใกล้หมดอายุ</span>':'<span class=\"badge good\">ใช้งาน</span>'));" +
-                "var p=(typeof currentProject==='function')?currentProject():null;" +
-                "var shown=(p&&p.product_code==='WELL_AUTO_EQ_PRO')?(l.activation_email||''):(l.license_key||'');" +
+                "var shown=l.license_key||'';" +
                 "var eid=encodeURIComponent(String(l.id));" +
                 "var display=esc(shown||'-');" +
                 "return '<tr><td><b>'+esc(l.customer_name||'-')+'</b><div style=\"display:flex;gap:7px;align-items:center;margin-top:8px;min-width:280px\"><input class=\"input\" readonly value=\"'+display+'\" style=\"min-width:0;flex:1;padding:8px 9px\"><button class=\"btn small primary\" style=\"white-space:nowrap\" onclick=\"copyLicense(decodeURIComponent(\\\''+eid+'\\\'))\">คัดลอก License</button></div></td><td>'+esc(l.mt5_login||l.activation_email||'-')+'</td><td>'+esc(l.broker||l.product_code||'-')+'<br><span class=\"muted\">'+esc(l.server||'')+'</span></td><td>'+esc(l.expires_at||'-')+'</td><td>'+status+'</td><td><div class=\"row-actions\"><button class=\"btn small\" onclick=\"openLicenseModal(decodeURIComponent(\\\''+eid+'\\\'))\">แก้ไข</button><button class=\"btn small '+(l.enabled===false?'primary':'')+'\" onclick=\"toggleLicense(decodeURIComponent(\\\''+eid+'\\\'),'+(l.enabled===false)+')\">'+(l.enabled===false?'เปิด':'ปิด')+'</button></div></td></tr>';" +
             "}).join('')||'<tr><td colspan=\"6\" class=\"muted\">ไม่มี License ในโปรเจกต์นี้</td></tr>';};" +
 
-            // Delete License only from inside Edit. Uses archive so audit/history is retained.
             "window.deleteLicenseFromEdit=async function(id){try{" +
                 "if(!id)return;if(!confirm('ยืนยันลบ License นี้?'))return;" +
                 "await call(API.core,{action:'archive',id:id});" +
@@ -91,7 +88,6 @@ public class MainActivity extends Activity {
                 "if(typeof refresh==='function')await refresh();" +
             "}catch(e){if(typeof toast==='function')toast('ลบ License ไม่สำเร็จ');}};" +
 
-            // Wrap Edit License after the original page has defined it.
             "var originalOpenLicenseModal=window.openLicenseModal;" +
             "if(typeof originalOpenLicenseModal==='function'){window.openLicenseModal=function(id){" +
                 "var r=originalOpenLicenseModal(id);" +
@@ -105,13 +101,11 @@ public class MainActivity extends Activity {
                 "return r;" +
             "};}" +
 
-            // Customer list: remove standalone Delete button. Keep only Edit on each row.
             "window.customerRows=function(rows){return (rows||[]).map(function(c){" +
                 "var eid=encodeURIComponent(String(c.id));" +
                 "return '<tr><td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(c.phone||'-')+'</td><td>'+esc(c.email||'-')+'</td><td>'+esc(c.line_id||'-')+'</td><td>'+(c.license_count||0)+'</td><td><div class=\"row-actions\"><button class=\"btn small\" onclick=\"openCustomerModal(decodeURIComponent(\\\''+eid+'\\\'))\">แก้ไข</button></div></td></tr>';" +
             "}).join('')||'<tr><td colspan=\"6\" class=\"muted\">ไม่มีลูกค้าในโปรเจกต์นี้</td></tr>';};" +
 
-            // Customer Delete button lives inside Edit modal only.
             "var originalOpenCustomerModal=window.openCustomerModal;" +
             "if(typeof originalOpenCustomerModal==='function'){window.openCustomerModal=function(id){" +
                 "var r=originalOpenCustomerModal(id);" +
@@ -125,7 +119,6 @@ public class MainActivity extends Activity {
                 "return r;" +
             "};}" +
 
-            // Preserve original navigation. New Project appears only on Projects page.
             "function syncProjectButton(){try{" +
                 "var active=document.querySelector('.nav button.active');" +
                 "var view=active&&active.dataset?active.dataset.view:'';" +
@@ -134,7 +127,7 @@ public class MainActivity extends Activity {
             "document.querySelectorAll('.nav button').forEach(function(b){b.addEventListener('click',function(){setTimeout(function(){syncProjectButton();if(b.dataset.view==='licenses'&&typeof renderLicenses==='function')renderLicenses();if(b.dataset.view==='customers'&&typeof renderCustomers==='function')renderCustomers();},0);},false);});" +
             "var observer=new MutationObserver(function(){syncProjectButton();});var nav=document.querySelector('.nav');if(nav)observer.observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});" +
             "syncProjectButton();if(typeof renderLicenses==='function')renderLicenses();if(typeof renderCustomers==='function')renderCustomers();" +
-            "}catch(e){console.log('Well Android v5 patch',e);}})();";
+            "}catch(e){console.log('Well Android v6 patch',e);}})();";
         v.evaluateJavascript(js, null);
     }
 
