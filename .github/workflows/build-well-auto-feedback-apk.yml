@@ -25,22 +25,22 @@ jobs:
         working-directory: well-auto-feedback-android
         run: gradle :app:assembleDebug --stacktrace
       - name: Rename APK
-        run: cp well-auto-feedback-android/app/build/outputs/apk/debug/app-debug.apk Well_Auto_EQ_Pro_v3.1_License.apk
+        run: cp well-auto-feedback-android/app/build/outputs/apk/debug/app-debug.apk Well_Auto_EQ_Pro_v1.0_License.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Well_Auto_EQ_Pro_v3.1_License
-          path: Well_Auto_EQ_Pro_v3.1_License.apk
+          name: Well_Auto_EQ_Pro_v1.0_License
+          path: Well_Auto_EQ_Pro_v1.0_License.apk
           if-no-files-found: error
       - name: Publish APK for direct download
         run: |
           mkdir -p downloads
-          cp Well_Auto_EQ_Pro_v3.1_License.apk downloads/Well_Auto_EQ_Pro_v3.1_License.apk
+          cp Well_Auto_EQ_Pro_v1.0_License.apk downloads/Well_Auto_EQ_Pro_v1.0_License.apk
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add downloads/Well_Auto_EQ_Pro_v3.1_License.apk
+          git add downloads/Well_Auto_EQ_Pro_v1.0_License.apk
           if git diff --cached --quiet; then
             echo 'APK unchanged'
           else
-            git commit -m 'Publish Well Auto EQ Pro v3.1 APK [skip ci]'
+            git commit -m 'Publish Well Auto EQ Pro v1.0 APK [skip ci]'
             git push origin well-auto-feedback-apk
           fi
