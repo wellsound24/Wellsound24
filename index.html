@@ -1,118 +1,134 @@
 <!doctype html>
 <html lang="th">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <title>Well License Dashboard</title>
-  <style>
-    html,body{margin:0;min-height:100%;background:#0b0f14;color:#f8fafc;font-family:system-ui,-apple-system,Segoe UI,Tahoma,sans-serif}
-    .boot{min-height:100vh;display:grid;place-items:center;padding:24px}
-    .card{width:min(460px,100%);background:#111827;border:1px solid #263244;border-radius:18px;padding:22px;box-sizing:border-box}
-    .row{display:flex;align-items:center;gap:12px}
-    .mark{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;background:#22c55e;color:#05200f;font-weight:900;font-size:24px}
-    h1{font-size:24px;margin:0 0 4px}.muted{color:#94a3b8}
-    .spin{width:18px;height:18px;border:3px solid #334155;border-top-color:#22c55e;border-radius:50%;animation:s .8s linear infinite;margin-top:18px}
-    @keyframes s{to{transform:rotate(360deg)}}
-    .err{display:none;color:#fecaca;background:#321318;border:1px solid #7f1d1d;border-radius:10px;padding:12px;margin-top:16px;white-space:pre-line}
-    button{margin-top:12px;border:0;border-radius:10px;padding:10px 14px;background:#22c55e;color:#05200f;font-weight:800}
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Well License Dashboard</title>
+<style>
+:root{--bg:#08111f;--panel:#0f1a2c;--panel2:#111f34;--line:#26364e;--text:#f8fafc;--muted:#94a3b8;--green:#4ade80;--green2:#22c55e;--red:#ef4444;--amber:#f59e0b}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Tahoma,sans-serif;background:radial-gradient(circle at top,#13213a 0,#08111f 40%,#050a12 100%);color:var(--text);min-height:100vh}
+button,input,select,textarea{font:inherit}.hidden{display:none!important}.muted{color:var(--muted)}.good{color:var(--green)}.bad{color:#fca5a5}
+.login-page{min-height:100vh;display:grid;place-items:center;padding:24px}.login-card{width:min(430px,100%);background:linear-gradient(180deg,#0e1b2d,#0a1423);border:1px solid #2a3a51;border-radius:20px;padding:28px;box-shadow:0 30px 80px #0008}
+.logo{width:72px;height:72px;border-radius:18px;display:grid;place-items:center;margin:0 auto 16px;background:#10253a;border:1px solid #31516d;color:#67e8f9;font-weight:900;font-size:36px}
+.login-title{text-align:center;font-size:28px;font-weight:800}.login-sub{text-align:center;color:#9fb0c5;margin:4px 0 24px}.field{margin:14px 0}.label{display:block;font-size:14px;color:#cbd5e1;margin-bottom:7px}.input,.select,.textarea{width:100%;background:#0a1320;color:#fff;border:1px solid #334155;border-radius:11px;padding:12px 13px;outline:none}.input:focus,.select:focus,.textarea:focus{border-color:#4ade80}
+.password-wrap{display:flex;gap:8px}.password-wrap .input{flex:1}.btn{border:1px solid #34465e;background:#17243a;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer}.btn.primary{background:#22c55e;color:#04120a;border-color:#22c55e;font-weight:800}.btn.danger{background:#7f1d1d;border-color:#b91c1c}.btn.small{padding:7px 10px;font-size:13px}.btn:disabled{opacity:.5;cursor:not-allowed}.remember{display:flex;gap:8px;align-items:center;color:#cbd5e1;font-size:14px}.login-msg{min-height:22px;color:#fca5a5;margin-top:10px}.forgot{display:block;text-align:center;margin-top:14px;color:#93c5fd;text-decoration:none}
+.app{display:grid;grid-template-columns:235px 1fr;min-height:100vh}.sidebar{background:#07101c;border-right:1px solid #1f2d40;padding:18px;position:sticky;top:0;height:100vh}.brand{font-size:19px;font-weight:900;margin-bottom:20px}.brand small{display:block;color:#8ea2ba;font-size:12px;font-weight:500;margin-top:3px}.nav{display:grid;gap:7px}.nav button{width:100%;text-align:left;background:transparent;color:#cbd5e1;border:0;padding:11px;border-radius:9px}.nav button.active,.nav button:hover{background:#142238;color:#fff}.sidebar-foot{position:absolute;left:18px;right:18px;bottom:18px}
+.main{padding:22px;min-width:0}.topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px}.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.project-select{min-width:200px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card,.panel{background:linear-gradient(180deg,#0f1b2e,#0b1524);border:1px solid #25364d;border-radius:14px;padding:16px}.metric{font-size:28px;font-weight:900;margin-top:6px}.panel{margin-bottom:14px}.panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.panel-title{font-weight:800}.panel-sub{color:#8fa2b8;font-size:13px;margin-top:3px}
+.toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}.search{max-width:330px}
+.table-wrap{overflow:auto;border:1px solid #22334a;border-radius:12px}table{width:100%;border-collapse:collapse;min-width:900px}th,td{text-align:left;padding:11px;border-bottom:1px solid #1f2d40;font-size:14px}th{color:#9fb0c5;background:#0b1524}.badge{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid #334155}.badge.good{background:#052e16;border-color:#166534}.badge.bad{background:#3f0c12;border-color:#7f1d1d}.badge.warn{background:#3b2805;border-color:#92400e;color:#fcd34d}.row-actions{display:flex;gap:6px;flex-wrap:wrap}
+.modal-backdrop{position:fixed;inset:0;background:#000a;display:grid;place-items:center;padding:18px;z-index:50}.modal{width:min(620px,100%);max-height:90vh;overflow:auto;background:#0b1524;border:1px solid #32455f;border-radius:16px;padding:18px}.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.span2{grid-column:1/-1}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;flex-wrap:wrap}
+.alert-list{display:grid;gap:8px}.alert{padding:11px;border:1px solid #3b4758;border-radius:10px;background:#0a1320}.alert.high{border-color:#7f1d1d}.alert.medium{border-color:#92400e}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.switch-line{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #1e293b}.url-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin:8px 0}
+.toast{position:fixed;right:18px;bottom:18px;background:#0f1a2c;border:1px solid #3b4c64;border-radius:10px;padding:12px 14px;z-index:100;box-shadow:0 12px 30px #0008}
+@media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{position:static;height:auto}.nav{grid-template-columns:repeat(3,1fr)}.sidebar-foot{position:static;margin-top:12px}.grid{grid-template-columns:repeat(2,1fr)}.settings-grid{grid-template-columns:1fr}.main{padding:14px}.project-select{min-width:150px}}
+@media(max-width:560px){.grid{grid-template-columns:1fr 1fr}.nav{grid-template-columns:1fr 1fr}.modal-grid{grid-template-columns:1fr}.span2{grid-column:auto}.topbar{align-items:flex-start;flex-direction:column}}
+</style>
 </head>
 <body>
-  <div class="boot" id="boot">
-    <div class="card">
-      <div class="row"><div class="mark">W</div><div><h1>Well License Dashboard</h1><div class="muted">กำลังเปิดระบบ...</div></div></div>
-      <div class="spin"></div>
-      <div id="err" class="err"></div>
-      <button id="retry" style="display:none" onclick="location.reload()">ลองใหม่</button>
-    </div>
+<div id="loginPage" class="login-page">
+  <div class="login-card">
+    <div class="logo">W</div>
+    <div class="login-title">Well License Dashboard</div>
+    <div class="login-sub">Next Management Suite</div>
+    <form id="loginForm">
+      <div class="field"><label class="label">Username</label><input id="loginUsername" class="input" autocomplete="username" required></div>
+      <div class="field"><label class="label">Password</label><div class="password-wrap"><input id="loginPassword" class="input" type="password" autocomplete="current-password" required><button id="showPassword" class="btn" type="button">แสดง</button></div></div>
+      <label class="remember"><input id="rememberLogin" type="checkbox"> จำ Password / การเข้าสู่ระบบ</label>
+      <button id="loginBtn" class="btn primary" style="width:100%;margin-top:16px" type="submit">เข้าสู่ระบบ</button>
+      <div id="loginMsg" class="login-msg"></div>
+      <a class="forgot" href="#" onclick="alert('ติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน');return false">ลืม Password?</a>
+    </form>
   </div>
+</div>
+
+<div id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="brand">Well License Dashboard<small>Next Management Suite</small></div>
+    <div class="nav">
+      <button data-view="dashboard" class="active">ภาพรวม</button>
+      <button data-view="licenses">License</button>
+      <button data-view="customers">ลูกค้า</button>
+      <button data-view="projects">โปรเจกต์</button>
+      <button data-view="settings">ตั้งค่า</button>
+    </div>
+    <div class="sidebar-foot"><div id="profileName" class="muted" style="margin-bottom:8px"></div><button id="logoutBtn" class="btn" style="width:100%">ออกจากระบบ</button></div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div><div id="pageTitle" style="font-size:24px;font-weight:900">ภาพรวม</div><div id="pageSub" class="muted">จัดการ License และลูกค้า</div></div>
+      <div class="top-actions"><select id="projectSelect" class="select project-select"></select><button id="newProjectBtn" class="btn primary">+ โปรเจกต์</button></div>
+    </div>
+    <section id="view-dashboard" class="view"></section>
+    <section id="view-licenses" class="view hidden"></section>
+    <section id="view-customers" class="view hidden"></section>
+    <section id="view-projects" class="view hidden"></section>
+    <section id="view-settings" class="view hidden"></section>
+  </main>
+</div>
+<div id="modalRoot"></div><div id="toast" class="toast hidden"></div>
+
 <script>
-(async()=>{
-  const EDGE="https://sjcxywxixgrpdgeqaepk.supabase.co/functions/v1/well-license-dashboard";
-  const EXTRA=`(() => {
-    let editingCustomerId='';
-    document.addEventListener('click', e => {
-      const b=e.target.closest && e.target.closest('[data-edit-customer]');
-      if(b) editingCustomerId=b.getAttribute('data-edit-customer')||'';
-    }, true);
+const API={core:'/api/core',next:'/api/next',projects:'/api/projects'};
+let token='', profile=null, licenses=[], customers=[], alerts=[], projects=[], urls=[], visibility=[], currentProjectId='';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),2200)}
+async function call(url,body,auth=true){const h={'content-type':'application/json'};if(auth&&token)h.authorization='Bearer '+token;const r=await fetch(url,{method:'POST',headers:h,body:JSON.stringify(body)});const j=await r.json().catch(()=>({ok:false,error:'server_error'}));if(!r.ok||!j.ok)throw new Error(j.error||'server_error');return j}
+function currentProject(){return projects.find(p=>p.id===currentProjectId)||projects[0]||null}
+function productMatches(l,p){if(!p)return true;const pc=l.product_code||'SEMI_EA';return pc===p.product_code}
+function daysLeft(d){if(!d)return null;return Math.ceil((new Date(String(d).slice(0,10)+'T23:59:59')-new Date())/86400000)}
+function openModal(html){$('#modalRoot').innerHTML='<div class="modal-backdrop"><div class="modal">'+html+'</div></div>'}
+function closeModal(){$('#modalRoot').innerHTML=''}
+window.closeModal=closeModal;
 
-    async function callCustom(action,payload={}){
-      const tok=(typeof token!=='undefined'?token:(localStorage.getItem('well_admin_token')||localStorage.getItem('token')||''));
-      const r=await fetch(window.__WELL_FN+'?custom=1',{
-        method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+tok},
-        body:JSON.stringify({action,...payload})
-      });
-      const j=await r.json().catch(()=>({ok:false,error:'server_error'}));
-      if(!r.ok||!j.ok) throw new Error(j.error||'server_error');
-      return j;
-    }
-
-    function addDeleteButton(){
-      if(!editingCustomerId) return;
-      const nodes=[...document.querySelectorAll('div,section,dialog')].filter(el=>{
-        const s=getComputedStyle(el); const txt=el.textContent||'';
-        return s.display!=='none' && s.visibility!=='hidden' && txt.includes('แก้ไขลูกค้า');
-      }).sort((a,b)=>(a.textContent||'').length-(b.textContent||'').length);
-      const modal=nodes[0];
-      if(!modal || modal.querySelector('[data-delete-customer-modal]')) return;
-      const btn=document.createElement('button');
-      btn.type='button'; btn.className='btn danger'; btn.dataset.deleteCustomerModal='1';
-      btn.textContent='ลบลูกค้า';
-      btn.style.cssText='background:#dc2626;color:#fff;border-color:#dc2626;margin-left:8px';
-      const area=[...modal.querySelectorAll('div')].reverse().find(x=>x.querySelector('button'))||modal;
-      area.appendChild(btn);
-      btn.onclick=async()=>{
-        let name='';
-        try{ if(typeof customers!=='undefined'){const c=customers.find(x=>String(x.id)===String(editingCustomerId));name=c?.name||c?.customer_name||'';} }catch{}
-        if(!confirm('ยืนยันลบลูกค้า'+(name?' “'+name+'”':'')+' ?\nLicense เดิมจะยังอยู่')) return;
-        btn.disabled=true; btn.textContent='กำลังลบ...';
-        try{
-          await callCustom('delete_customer',{id:editingCustomerId});
-          if(typeof toast==='function') toast('ลบลูกค้าแล้ว');
-          const close=[...modal.querySelectorAll('button')].find(x=>/ยกเลิก|ปิด/.test(x.textContent||'')); if(close) close.click();
-          editingCustomerId='';
-          if(typeof loadAll==='function') await loadAll();
-        }catch(err){btn.disabled=false;btn.textContent='ลบลูกค้า'; if(typeof toast==='function')toast('ลบลูกค้าไม่สำเร็จ','bad'); else alert('ลบลูกค้าไม่สำเร็จ');}
-      };
-    }
-
-    function renderLicenseWarnings(){
-      const view=document.getElementById('view-licenses');
-      if(!view || typeof licenses==='undefined') return;
-      let box=document.getElementById('licenseWarningBox');
-      if(!box){box=document.createElement('div');box.id='licenseWarningBox';box.className='panel';box.style.marginBottom='14px';view.prepend(box);}
-      const today=new Date();today.setHours(0,0,0,0);
-      const bad=[];
-      for(const l of licenses){
-        const exp=l.expires_at?new Date(String(l.expires_at).slice(0,10)+'T00:00:00'):null;
-        const days=exp?Math.ceil((exp-today)/86400000):null;
-        if(l.enabled===false) bad.push('ปิดใช้งาน: '+(l.customer_name||l.license_key||'-'));
-        else if(days!==null && days<0) bad.push('หมดอายุ: '+(l.customer_name||l.license_key||'-'));
-        else if(days!==null && days<=7) bad.push('ใกล้หมดอายุ '+days+' วัน: '+(l.customer_name||l.license_key||'-'));
-      }
-      box.innerHTML='<div class="panel-head"><div><div class="panel-title">แจ้งเตือน License</div><div class="panel-sub">หมดอายุ / ปิดใช้งาน / ใกล้หมดอายุภายใน 7 วัน</div></div></div>'+
-        (bad.length?'<div class="stack">'+bad.map(x=>'<div class="backup-card" style="border-color:#7f1d1d">'+String(x).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</div>').join('')+'</div>':'<div class="empty">ไม่มี License ที่ต้องแจ้งเตือน</div>');
-    }
-
-    const obs=new MutationObserver(()=>{try{addDeleteButton();renderLicenseWarnings();}catch{}});
-    obs.observe(document.documentElement,{childList:true,subtree:true});
-    setTimeout(()=>{try{addDeleteButton();renderLicenseWarnings();}catch{}},700);
-  })();`;
-  try {
-    const r=await fetch(EDGE+'?v='+Date.now(),{cache:'no-store'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    let t=await r.text();
-    t=t.replace("const FN=location.origin+location.pathname;","const FN='"+EDGE+"';");
-    t=t.replace('</body>','<script>'+EXTRA.replace(/<\\/script>/gi,'<\\/script>')+'<\\/script></body>');
-    document.open();document.write(t);document.close();
-  } catch(e) {
-    document.querySelector('.spin').style.display='none';
-    const box=document.getElementById('err');box.style.display='block';
-    box.textContent='เปิด Dashboard ไม่สำเร็จ\n'+(e&&e.message?e.message:e);
-    document.getElementById('retry').style.display='inline-block';
-  }
-})();
+async function login(username,password,remember){
+  const j=await call(API.core,{action:'login',username,password},false);token=j.session.token;profile=j.profile;
+  sessionStorage.setItem('well_admin_session',token);
+  if(remember){localStorage.setItem('well_admin_remember','1');localStorage.setItem('well_admin_remember_user',username);localStorage.setItem('well_admin_remember_token',token)}
+  else{localStorage.removeItem('well_admin_remember');localStorage.removeItem('well_admin_remember_token')}
+  await boot();
+}
+async function boot(){
+  try{if(!profile){const me=await call(API.core,{action:'me'});profile=me.profile}
+    const [l,b,p]=await Promise.all([call(API.core,{action:'list'}),call(API.next,{action:'bootstrap'}),call(API.projects,{action:'bootstrap'})]);
+    licenses=l.licenses||[];customers=b.customers||[];alerts=b.alerts||[];projects=p.projects||[];urls=p.urls||[];visibility=p.visibility||[];
+    if(!currentProjectId||!projects.some(x=>x.id===currentProjectId)){currentProjectId=localStorage.getItem('well_project')||projects[0]?.id||''}
+    if(!projects.some(x=>x.id===currentProjectId))currentProjectId=projects[0]?.id||'';
+    $('#loginPage').classList.add('hidden');$('#app').classList.remove('hidden');$('#profileName').textContent=profile?.display_name||profile?.username||'Admin';renderProjectSelect();renderAll();
+  }catch(e){token='';sessionStorage.removeItem('well_admin_session');localStorage.removeItem('well_admin_remember_token');$('#loginPage').classList.remove('hidden');$('#app').classList.add('hidden');$('#loginMsg').textContent=e.message==='unauthorized'?'กรุณาเข้าสู่ระบบใหม่':'โหลดข้อมูลไม่สำเร็จ'}
+}
+function renderProjectSelect(){const s=$('#projectSelect');s.innerHTML=projects.filter(p=>p.active!==false).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');s.value=currentProjectId}
+function filteredLicenses(){const p=currentProject();return licenses.filter(l=>productMatches(l,p))}
+function renderAll(){renderDashboard();renderLicenses();renderCustomers();renderProjects();renderSettings()}
+function renderDashboard(){const ls=filteredLicenses(),active=ls.filter(x=>x.enabled!==false&&((daysLeft(x.expires_at)??99)>=0)).length,exp=ls.filter(x=>(daysLeft(x.expires_at)??99)<0).length,warn=ls.filter(x=>{const d=daysLeft(x.expires_at);return d!==null&&d>=0&&d<=7}).length;
+$('#view-dashboard').innerHTML=`<div class="grid"><div class="card"><div class="muted">License ทั้งหมด</div><div class="metric">${ls.length}</div></div><div class="card"><div class="muted">ใช้งาน</div><div class="metric good">${active}</div></div><div class="card"><div class="muted">ใกล้หมดอายุ</div><div class="metric" style="color:#fcd34d">${warn}</div></div><div class="card"><div class="muted">หมดอายุ</div><div class="metric bad">${exp}</div></div></div><div class="panel" style="margin-top:14px"><div class="panel-head"><div><div class="panel-title">แจ้งเตือน</div><div class="panel-sub">License หมดอายุ / รอ IB / Verify ไม่ผ่าน</div></div></div><div class="alert-list">${alerts.length?alerts.slice(0,12).map(a=>`<div class="alert ${a.severity||''}"><b>${esc(a.title)}</b><div class="muted">${esc(a.detail||'')}</div></div>`).join(''):'<div class="muted">ไม่มีการแจ้งเตือน</div>'}</div></div>`}
+function renderLicenses(){const ls=filteredLicenses();$('#view-licenses').innerHTML=`<div class="panel"><div class="toolbar"><input id="licenseSearch" class="input search" placeholder="ค้นหา License / ลูกค้า / MT5"><button class="btn primary" onclick="openLicenseModal()">+ เพิ่ม License</button></div><div class="table-wrap"><table><thead><tr><th>ลูกค้า</th><th>MT5 / Email</th><th>Broker / Product</th><th>หมดอายุ</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="licenseRows">${licenseRows(ls)}</tbody></table></div></div>`;$('#licenseSearch').oninput=e=>{const q=e.target.value.toLowerCase();$('#licenseRows').innerHTML=licenseRows(ls.filter(x=>JSON.stringify(x).toLowerCase().includes(q)))}}
+function licenseRows(ls){return ls.map(l=>{const d=daysLeft(l.expires_at);const status=l.enabled===false?'<span class="badge bad">ปิด</span>':d!==null&&d<0?'<span class="badge bad">หมดอายุ</span>':d!==null&&d<=7?'<span class="badge warn">ใกล้หมดอายุ</span>':'<span class="badge good">ใช้งาน</span>';return `<tr><td><b>${esc(l.customer_name||'-')}</b><br><span class="muted">${esc(l.license_key||'')}</span></td><td>${esc(l.mt5_login||l.activation_email||'-')}</td><td>${esc(l.broker||l.product_code||'-')}<br><span class="muted">${esc(l.server||'')}</span></td><td>${esc(l.expires_at||'-')}</td><td>${status}</td><td><div class="row-actions"><button class="btn small" onclick='openLicenseModal(${JSON.stringify(l.id)})'>แก้ไข</button><button class="btn small ${l.enabled===false?'primary':''}" onclick='toggleLicense(${JSON.stringify(l.id)},${l.enabled===false})'>${l.enabled===false?'เปิด':'ปิด'}</button></div></td></tr>`}).join('')||'<tr><td colspan="6" class="muted">ไม่มี License ในโปรเจกต์นี้</td></tr>'}
+function openLicenseModal(id=''){const l=licenses.find(x=>x.id===id)||{},p=currentProject();if(p&&p.product_code!=='SEMI_EA'&&id===''){toast('การสร้าง License ของโปรเจกต์นี้ใช้ฟอร์มเฉพาะ โปรดใช้ตัวเดิมก่อน');return}
+openModal(`<div class="panel-head"><div class="panel-title">${id?'แก้ไข':'เพิ่ม'} License</div><button class="btn small" onclick="closeModal()">ปิด</button></div><form id="licenseForm"><div class="modal-grid"><div class="field"><label class="label">ชื่อลูกค้า</label><input id="lfName" class="input" value="${esc(l.customer_name||'')}" required></div><div class="field"><label class="label">MT5 Login</label><input id="lfLogin" class="input" value="${esc(l.mt5_login||'')}" required></div><div class="field"><label class="label">Broker</label><input id="lfBroker" class="input" value="${esc(l.broker||'')}" required></div><div class="field"><label class="label">Server</label><input id="lfServer" class="input" value="${esc(l.server||'')}" required></div><div class="field"><label class="label">IB Status</label><select id="lfIb" class="select"><option value="approved">approved</option><option value="pending">pending</option><option value="rejected">rejected</option></select></div><div class="field"><label class="label">หมดอายุ</label><input id="lfExp" type="date" class="input" value="${esc((l.expires_at||'').slice(0,10))}" required></div><div class="field span2"><label class="label">หมายเหตุ</label><textarea id="lfNotes" class="textarea">${esc(l.notes||'')}</textarea></div></div><div class="modal-actions"><button type="button" class="btn" onclick="closeModal()">ยกเลิก</button><button class="btn primary">บันทึก</button></div></form>`);$('#lfIb').value=l.ib_status||'pending';$('#licenseForm').onsubmit=async e=>{e.preventDefault();try{const body={action:id?'update_license':'create',id,customer_name:$('#lfName').value.trim(),mt5_login:$('#lfLogin').value.trim(),broker:$('#lfBroker').value.trim(),server:$('#lfServer').value.trim(),ib_status:$('#lfIb').value,expires_at:$('#lfExp').value,notes:$('#lfNotes').value.trim()};await call(API.core,body);closeModal();toast('บันทึก License แล้ว');await refresh()}catch(err){toast('บันทึกไม่สำเร็จ: '+err.message)}}}
+async function toggleLicense(id,enabled){try{await call(API.core,{action:'toggle',id,enabled});toast('อัปเดตสถานะแล้ว');await refresh()}catch(e){toast('อัปเดตไม่สำเร็จ')}}
+function renderCustomers(){$('#view-customers').innerHTML=`<div class="panel"><div class="toolbar"><input id="customerSearch" class="input search" placeholder="ค้นหาลูกค้า"><button class="btn primary" onclick="openCustomerModal()">+ เพิ่มลูกค้า</button></div><div class="table-wrap"><table><thead><tr><th>ชื่อลูกค้า</th><th>โทร</th><th>Email</th><th>LINE</th><th>License</th><th>จัดการ</th></tr></thead><tbody id="customerRows">${customerRows(customers)}</tbody></table></div></div>`;$('#customerSearch').oninput=e=>{const q=e.target.value.toLowerCase();$('#customerRows').innerHTML=customerRows(customers.filter(x=>JSON.stringify(x).toLowerCase().includes(q)))}}
+function customerRows(rows){return rows.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.phone||'-')}</td><td>${esc(c.email||'-')}</td><td>${esc(c.line_id||'-')}</td><td>${c.license_count||0}</td><td><div class="row-actions"><button class="btn small" onclick='openCustomerModal(${JSON.stringify(c.id)})'>แก้ไข</button><button class="btn small danger" onclick='deleteCustomer(${JSON.stringify(c.id)})'>ลบ</button></div></td></tr>`).join('')||'<tr><td colspan="6" class="muted">ไม่มีลูกค้า</td></tr>'}
+function openCustomerModal(id=''){const c=customers.find(x=>x.id===id)||{};openModal(`<div class="panel-head"><div class="panel-title">${id?'แก้ไข':'เพิ่ม'}ลูกค้า</div><button class="btn small" onclick="closeModal()">ปิด</button></div><form id="customerForm"><div class="modal-grid"><div class="field"><label class="label">ชื่อลูกค้า</label><input id="cfName" class="input" value="${esc(c.name||'')}" required></div><div class="field"><label class="label">เบอร์โทร</label><input id="cfPhone" class="input" value="${esc(c.phone||'')}"></div><div class="field"><label class="label">Email</label><input id="cfEmail" class="input" value="${esc(c.email||'')}"></div><div class="field"><label class="label">LINE ID</label><input id="cfLine" class="input" value="${esc(c.line_id||'')}"></div><div class="field span2"><label class="label">หมายเหตุ</label><textarea id="cfNotes" class="textarea">${esc(c.notes||'')}</textarea></div></div><div class="modal-actions">${id?`<button type="button" class="btn danger" onclick='deleteCustomer(${JSON.stringify(id)})'>ลบลูกค้า</button>`:''}<button type="button" class="btn" onclick="closeModal()">ยกเลิก</button><button class="btn primary">บันทึก</button></div></form>`);$('#customerForm').onsubmit=async e=>{e.preventDefault();try{await call(API.next,{action:id?'update_customer':'create_customer',id,name:$('#cfName').value.trim(),phone:$('#cfPhone').value.trim(),email:$('#cfEmail').value.trim(),line_id:$('#cfLine').value.trim(),notes:$('#cfNotes').value.trim()});closeModal();toast('บันทึกลูกค้าแล้ว');await refresh()}catch(err){toast('บันทึกไม่สำเร็จ: '+err.message)}}}
+async function deleteCustomer(id){const c=customers.find(x=>x.id===id);if(!confirm(`ยืนยันลบลูกค้า “${c?.name||''}” ?\nLicense เดิมจะยังอยู่`))return;try{await call(API.projects,{action:'delete_customer',id});closeModal();toast('ลบลูกค้าแล้ว');await refresh()}catch(e){toast('ลบลูกค้าไม่สำเร็จ')}}
+function renderProjects(){const p=currentProject();$('#view-projects').innerHTML=`<div class="settings-grid"><div class="panel"><div class="panel-head"><div><div class="panel-title">โปรเจกต์</div><div class="panel-sub">สร้างโปรเจกต์ได้เรื่อย ๆ</div></div></div>${projects.map(x=>`<div class="switch-line"><span><b>${esc(x.name)}</b><br><small class="muted">${esc(x.product_code)}</small></span><button class="btn small" onclick='selectProject(${JSON.stringify(x.id)})'>เลือก</button></div>`).join('')}</div><div class="panel"><div class="panel-title">ตั้งค่าโปรเจกต์ปัจจุบัน</div>${p?projectEditor(p):'<div class="muted">ยังไม่มีโปรเจกต์</div>'}</div></div>`}
+function projectEditor(p){const f=p.field_config||{};return `<div class="field"><label class="label">ชื่อโปรเจกต์</label><input id="projectName" class="input" value="${esc(p.name)}"></div>${[['mt5','MT5 Login'],['broker','Broker'],['server','Server'],['ib','IB Status'],['email','Email'],['device','Device ID']].map(([k,n])=>`<label class="switch-line"><span>${n}</span><input type="checkbox" data-pfield="${k}" ${f[k]?'checked':''}></label>`).join('')}<button class="btn primary" style="margin-top:12px" onclick="saveProject()">บันทึกโปรเจกต์</button>`}
+function renderSettings(){$('#view-settings').innerHTML=`<div class="panel"><div class="panel-head"><div><div class="panel-title">URL กลาง 3 ช่อง</div><div class="panel-sub">ติ๊กว่าจะให้ URL ไหนแสดงในแต่ละโปรเจกต์</div></div></div>${urls.map(u=>`<div class="panel" style="margin:10px 0"><div class="url-row"><input id="url${u.slot}" class="input" value="${esc(u.url||'')}" placeholder="https://..."><button class="btn" onclick="saveUrl(${u.slot})">บันทึก</button></div><div class="muted">${esc(u.label||('URL '+u.slot))}</div>${projects.map(pr=>`<label class="switch-line"><span>${esc(pr.name)}</span><input type="checkbox" data-vis="${pr.id}|${u.slot}" ${isVisible(pr.id,u.slot)?'checked':''}></label>`).join('')}</div>`).join('')}</div>`;$$('[data-vis]').forEach(x=>x.onchange=()=>setVisibility(x))}
+function isVisible(pid,slot){return !!visibility.find(v=>v.project_id===pid&&Number(v.slot)===Number(slot)&&v.visible)}
+async function setVisibility(el){const [project_id,slot]=el.dataset.vis.split('|');try{await call(API.projects,{action:'set_visibility',project_id,slot:Number(slot),visible:el.checked});await refreshProjectsOnly();toast('บันทึกแล้ว')}catch(e){toast('บันทึกไม่สำเร็จ')}}
+async function saveUrl(slot){try{await call(API.projects,{action:'save_url',slot,url:$('#url'+slot).value.trim()});await refreshProjectsOnly();toast('บันทึก URL แล้ว')}catch(e){toast('บันทึกไม่สำเร็จ')}}
+function selectProject(id){currentProjectId=id;localStorage.setItem('well_project',id);renderProjectSelect();renderAll();switchView('dashboard')}
+async function saveProject(){const p=currentProject();const field_config={};$$('[data-pfield]').forEach(x=>field_config[x.dataset.pfield]=x.checked);try{await call(API.projects,{action:'update_project',id:p.id,name:$('#projectName').value.trim(),field_config});await refreshProjectsOnly();toast('บันทึกโปรเจกต์แล้ว')}catch(e){toast('บันทึกไม่สำเร็จ')}}
+function newProject(){openModal(`<div class="panel-head"><div class="panel-title">สร้างโปรเจกต์ใหม่</div><button class="btn small" onclick="closeModal()">ปิด</button></div><div class="field"><label class="label">ชื่อโปรเจกต์</label><input id="newProjectName" class="input" placeholder="เช่น โปรแกรมใหม่"></div><div class="modal-actions"><button class="btn" onclick="closeModal()">ยกเลิก</button><button class="btn primary" onclick="createProjectNow()">สร้างโปรเจกต์</button></div>`)}
+async function createProjectNow(){const name=$('#newProjectName').value.trim();if(!name)return;try{const j=await call(API.projects,{action:'create_project',name});currentProjectId=j.project.id;localStorage.setItem('well_project',currentProjectId);closeModal();await refreshProjectsOnly();toast('สร้างโปรเจกต์แล้ว');switchView('projects')}catch(e){toast('สร้างโปรเจกต์ไม่สำเร็จ')}}
+window.openLicenseModal=openLicenseModal;window.toggleLicense=toggleLicense;window.openCustomerModal=openCustomerModal;window.deleteCustomer=deleteCustomer;window.selectProject=selectProject;window.saveProject=saveProject;window.saveUrl=saveUrl;window.createProjectNow=createProjectNow;
+async function refresh(){const [l,b]=await Promise.all([call(API.core,{action:'list'}),call(API.next,{action:'bootstrap'})]);licenses=l.licenses||[];customers=b.customers||[];alerts=b.alerts||[];renderAll()}
+async function refreshProjectsOnly(){const p=await call(API.projects,{action:'bootstrap'});projects=p.projects||[];urls=p.urls||[];visibility=p.visibility||[];renderProjectSelect();renderAll()}
+function switchView(name){$$('.view').forEach(x=>x.classList.add('hidden'));$('#view-'+name).classList.remove('hidden');$$('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.view===name));const titles={dashboard:'ภาพรวม',licenses:'License',customers:'ลูกค้า',projects:'โปรเจกต์',settings:'ตั้งค่า'};$('#pageTitle').textContent=titles[name]||name}
+$$('.nav button').forEach(b=>b.onclick=()=>switchView(b.dataset.view));$('#projectSelect').onchange=e=>selectProject(e.target.value);$('#newProjectBtn').onclick=newProject;
+$('#showPassword').onclick=()=>{const p=$('#loginPassword'),show=p.type==='password';p.type=show?'text':'password';$('#showPassword').textContent=show?'ซ่อน':'แสดง'};
+$('#loginForm').onsubmit=async e=>{e.preventDefault();$('#loginMsg').textContent='';$('#loginBtn').disabled=true;try{await login($('#loginUsername').value.trim(),$('#loginPassword').value,$('#rememberLogin').checked)}catch(err){$('#loginMsg').textContent='Username หรือ Password ไม่ถูกต้อง'}finally{$('#loginBtn').disabled=false}};
+$('#logoutBtn').onclick=async()=>{try{await call(API.core,{action:'logout'})}catch{}token='';profile=null;sessionStorage.clear();localStorage.removeItem('well_admin_remember_token');location.reload()};
+(function restore(){try{const r=localStorage.getItem('well_admin_remember')==='1';$('#rememberLogin').checked=r;if(r)$('#loginUsername').value=localStorage.getItem('well_admin_remember_user')||'';token=sessionStorage.getItem('well_admin_session')||(r?localStorage.getItem('well_admin_remember_token')||'':'');if(token)boot()}catch{}})();
 </script>
-</body>
-</html>
+</body></html>
