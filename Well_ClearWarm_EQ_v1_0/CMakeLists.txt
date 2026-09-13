@@ -27,6 +27,8 @@ juce_add_plugin(WellClearWarmEQ
     PRODUCT_NAME "Well ClearWarm EQ"
 )
 
+juce_generate_juce_header(WellClearWarmEQ)
+
 target_sources(WellClearWarmEQ PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
