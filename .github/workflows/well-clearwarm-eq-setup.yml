@@ -1,0 +1,46 @@
+name: Build Well ClearWarm EQ Windows Setup
+
+on:
+  push:
+    branches:
+      - well-clearwarm-eq-v1-setup
+    paths:
+      - 'Well_ClearWarm_EQ_v1_0/**'
+      - '.github/workflows/well-clearwarm-eq-setup.yml'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure
+        shell: pwsh
+        run: cmake -S Well_ClearWarm_EQ_v1_0 -B build-eq -G "Visual Studio 17 2022" -A x64
+
+      - name: Build VST3 and Standalone
+        shell: pwsh
+        run: cmake --build build-eq --config Release --target WellClearWarmEQ_VST3 WellClearWarmEQ_Standalone --parallel 2
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Create installer
+        shell: pwsh
+        run: '& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "Well_ClearWarm_EQ_v1_0\installer.iss"'
+
+      - name: Show output
+        shell: pwsh
+        run: Get-ChildItem -Recurse dist
+
+      - name: Upload setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: Well_ClearWarm_EQ_v1_0_Setup
+          path: dist/Well_ClearWarm_EQ_v1_0_Setup.exe
+          if-no-files-found: error
