@@ -1,0 +1,44 @@
+name: Add Processing Status Overview
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/add-processing-status-overview.yml'
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch saved processing status into overview cards
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('well-assistant-pro-android/app/src/main/assets/index.html')
+          s=p.read_text()
+          old="""let pct=Math.max(4,Math.min(96,(c.db+70)*2));let status=c.db>-12?'warn':'ok';d.innerHTML=`<div class=\"chTop\"><div><div class=\"chNo\">CH ${String(c.ch).padStart(2,'0')}</div><div class=\"chName\">${c.name}</div></div><span class=\"chAuto ${c.auto?'on':''}\">${c.auto?'AUTO':'MAN'}</span></div><div class=\"chMeter\"><div class=\"chMeterFill\" style=\"height:${pct}%\"></div></div><div class=\"chDb\">${c.db.toFixed(1)} dB</div><div class=\"chFlags\"><span class=\"chFlag ${status}\">EQ</span><span class=\"chFlag ok\">GATE</span><span class=\"chFlag ok\">COMP</span><span class=\"chFlag ${c.fb?'bad':'ok'}\">FB</span></div>`;g.appendChild(d)"""
+          new="""let pct=Math.max(4,Math.min(96,(c.db+70)*2));let status=c.db>-12?'warn':'ok';
+          let saved=(window.chCfg&&chCfg[c.ch])?chCfg[c.ch]:null;
+          let srcName=(saved&&saved.source&&saved.source!=='SELECT INPUT TYPE')?saved.source:c.name;
+          let proc=(saved&&saved.proc)?saved.proc:{};
+          const pOn=(name)=>!!(proc[name]&&proc[name].on);
+          const pMode=(name)=>proc[name]&&proc[name].mode==='MANUAL'?'M':'A';
+          const flag=(label,name)=>`<span class=\"chFlag ${pOn(name)?'activeProc':''}\">${label}${pOn(name)?'<i>'+pMode(name)+'</i>':''}</span>`;
+          d.innerHTML=`<div class=\"chTop\"><div><div class=\"chNo\">CH ${String(c.ch).padStart(2,'0')}</div><div class=\"chName\">${srcName}</div></div><span class=\"chAuto ${c.auto?'on':''}\">${c.auto?'AUTO':'MAN'}</span></div><div class=\"chMeter\"><div class=\"chMeterFill\" style=\"height:${pct}%\"></div></div><div class=\"chDb\">${c.db.toFixed(1)} dB</div><div class=\"chFlags\">${flag('EQ','EQ')}${flag('GATE','GATE')}${flag('COMP','COMPRESSOR')}${flag('FB','FEEDBACK GUARD')}${flag('HPF','HPF / LOW CUT')}</div>`;g.appendChild(d)"""
+          if old not in s:
+              raise SystemExit('target overview block not found')
+          s=s.replace(old,new,1)
+          css="""<style id=\"overviewProcessingStatusUI\">.chFlag{opacity:.42}.chFlag.activeProc{opacity:1;color:#75d6ff!important;border-color:#2d83ad!important;background:#0e2b3d!important;box-shadow:0 0 0 1px rgba(69,179,230,.12) inset}.chFlag i{font-style:normal;font-size:7px;margin-left:3px;color:#b9e9ff;vertical-align:1px}.chName{text-transform:none}</style>"""
+          s=s.replace('</head>',css+'</head>')
+          # refresh overview immediately after saving/changing settings
+          s=s.replace("function csSave(){try{saveCh()}catch(e){localStorage.setItem('wellChannelConfig',JSON.stringify(chCfg))}localStorage.setItem('wellChannelPresets',JSON.stringify(csPresets))}","function csSave(){try{saveCh()}catch(e){localStorage.setItem('wellChannelConfig',JSON.stringify(chCfg))}localStorage.setItem('wellChannelPresets',JSON.stringify(csPresets));try{render32Channels()}catch(e){}}")
+          p.write_text(s)
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name wellsound24
+          git config user.email wellsound24@gmail.com
+          git add well-assistant-pro-android/app/src/main/assets/index.html
+          git diff --cached --quiet || git commit -m 'Show saved channel processing status in overview'
+          git push
