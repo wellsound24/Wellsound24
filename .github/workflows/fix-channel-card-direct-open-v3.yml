@@ -1,0 +1,38 @@
+name: Fix Channel Card Direct Open V3
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/fix-channel-card-direct-open-v3.yml'
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch direct card open
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('well-assistant-pro-android/app/src/main/assets/index.html')
+          s=p.read_text()
+          old="d.onclick=()=>selectOverviewCh(c.ch);"
+          new="d.onclick=(e)=>{e.preventDefault();e.stopPropagation();selectedOverviewCh=c.ch;let ch=document.getElementById('ch');if(ch)ch.value=c.ch;openChannelSetup(c.ch)};"
+          if old not in s:
+              raise SystemExit('target onclick not found')
+          s=s.replace(old,new,1)
+          # stop re-wiring code from overriding/relying on stale cards
+          s=s.replace("window.addEventListener('load',()=>setTimeout(wireChannelCards,500));","window.addEventListener('load',()=>{});")
+          # remove delegated experimental handlers if present
+          import re
+          s=re.sub(r'<script id="channelCardDirectSetupV2">.*?</script>','',s,flags=re.S)
+          p.write_text(s)
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name wellsound24
+          git config user.email wellsound24@gmail.com
+          git add well-assistant-pro-android/app/src/main/assets/index.html
+          git diff --cached --quiet || git commit -m 'Make channel cards open setup directly'
+          git push
