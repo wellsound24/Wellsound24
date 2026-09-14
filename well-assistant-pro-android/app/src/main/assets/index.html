@@ -81,7 +81,7 @@ function toggleBypass(){bypass=!bypass;log('BYPASS '+(bypass?'ON (original)':'OF
   setInterval(refreshPro,350);refreshPro();
 })();
 </script><!-- WELL_MOBILE_PRO_UI_END --><script id="well32chJS">
-let selectedOverviewCh=1,allAutoEnabled=false;const channelStates=Array.from({length:32},(_,i)=>({ch:i+1,name:(['Vocal','Kick','Snare','Bass','Guitar','Speech'][i%6]),db:-60+Math.random()*28,auto:true,fb:false}));
+let selectedOverviewCh=1,allAutoEnabled=false;const channelStates=Array.from({length:32},(_,i)=>({ch:i+1,name:(['Vocal','Kick','Snare','Bass','Guitar','Speech'][i%6]),db:-Infinity,auto:true,fb:false}));
 function render32Channels(){let g=document.getElementById('chGrid32');if(!g)return;g.innerHTML='';channelStates.forEach(c=>{let d=document.createElement('button');d.type='button';d.dataset.ch=String(c.ch);d.className='chStrip '+(c.ch===selectedOverviewCh?'sel':'');d.onclick=(e)=>{e.preventDefault();e.stopPropagation();selectedOverviewCh=c.ch;let ch=document.getElementById('ch');if(ch)ch.value=c.ch;openChannelSetup(c.ch)};let pct=Math.max(4,Math.min(96,(c.db+70)*2));let status=c.db>-12?'warn':'ok';
 let saved=(window.chCfg&&chCfg[c.ch])?chCfg[c.ch]:null;
 let srcName=(saved&&saved.source&&saved.source!=='SELECT INPUT TYPE')?saved.source:c.name;
@@ -94,7 +94,7 @@ function selectOverviewCh(n){selectedOverviewCh=n;let ch=document.getElementById
 function openSelectedChannel(){let ch=document.getElementById('ch');if(ch)ch.value=selectedOverviewCh;go('channels')}
 function toggleAllAuto(){allAutoEnabled=!allAutoEnabled;channelStates.forEach(c=>c.auto=allAutoEnabled);let b=document.getElementById('allAutoBtn');if(b){b.classList.toggle('on',allAutoEnabled);b.textContent=allAutoEnabled?'AUTO ALL ON':'AUTO ALL'};render32Channels();log('ALL CHANNEL AUTO '+(allAutoEnabled?'ON':'OFF'));toast(allAutoEnabled?'Auto enabled on all 32 channels':'Auto disabled on all channels')}
 function applyAllChannels(){for(let n=1;n<=32;n++){let nn=String(n).padStart(2,'0');if(target==='real'){send('/ch/'+nn+'/eq/on','int',1);send('/ch/'+nn+'/gate/on','int',1);send('/ch/'+nn+'/dyn/on','int',1)}}log('APPLY ALL 32 CHANNELS');toast(target==='real'?'Sent processing enable to 32 channels':'Applied to 32 virtual channels')}
-function animate32Meters(){if(target==='sim'&&simPowered){channelStates.forEach(c=>{c.db+= (Math.random()-.5)*5;c.db=Math.max(-68,Math.min(-8,c.db));if(Math.random()<.004)c.fb=!c.fb});render32Channels()}setTimeout(animate32Meters,700)}
+function animate32Meters(){setTimeout(animate32Meters,700)}
 window.addEventListener('load',()=>{render32Channels();animate32Meters()});
 </script><div id="procModal" class="procModal" onclick="if(event.target===this)closeProc()"><div class="procSheet"><div class="procHead"><div><h2 id="procTitle">CHANNEL PROCESSING</h2><small>Choose processing for this input</small></div><button class="procClose" onclick="closeProc()">×</button></div><div id="procList"></div></div></div><script id="channelProcessingJS">const sourceTypes=['SELECT INPUT TYPE','VOCAL MIC','SPEECH MIC','KICK','SNARE','TOM','HI-HAT','BASS','GUITAR','KEYBOARD','PLAYBACK / DJ','INSTRUMENT','OTHER'];const processors=[['HPF / LOW CUT','Remove unwanted low frequency'],['GATE','Noise and bleed control'],['EQ','Tone and frequency shaping'],['COMPRESSOR','Dynamic control'],['INSERT / FX','Insert processing'],['FEEDBACK GUARD','Feedback protection'],['GAIN ASSIST','Input level assistance']];let displayChannels=parseInt(localStorage.getItem('wellDisplayChannels')||'32'),chCfg=JSON.parse(localStorage.getItem('wellChannelConfig')||'{}');function saveCh(){localStorage.setItem('wellChannelConfig',JSON.stringify(chCfg))}function enhance32(){let g=document.getElementById('chGrid32');if(!g)return;[...g.children].forEach((c,i)=>{let n=i+1;if(!chCfg[n])chCfg[n]={source:'SELECT INPUT TYPE',proc:{}};let q=document.createElement('select');q.className='chSource';sourceTypes.forEach(x=>{let o=new Option(x,x);o.selected=chCfg[n].source===x;q.add(o)});q.onclick=e=>e.stopPropagation();q.onchange=e=>{e.stopPropagation();chCfg[n].source=q.value;saveCh()};let b=document.createElement('button');b.className='chProcBtn';b.textContent='PROCESSING';b.onclick=e=>{e.stopPropagation();openProc(n)};let t=c.querySelector('.chTop')||c.firstElementChild;t.after(q);q.after(b)});applyDisplayCount()}function applyDisplayCount(){let g=document.getElementById('chGrid32');if(g)[...g.children].forEach((c,i)=>c.style.display=i<displayChannels?'':'none');let e=document.getElementById('displayCount');if(e)e.value=displayChannels}function setDisplayCount(v){displayChannels=+v;localStorage.setItem('wellDisplayChannels',v);applyDisplayCount()}function openProc(n){let cfg=chCfg[n];document.getElementById('procTitle').textContent='CH '+String(n).padStart(2,'0')+' — '+cfg.source;let z=document.getElementById('procList');z.innerHTML='';processors.forEach(([name,desc])=>{let x=cfg.proc[name]||{on:false,mode:'AUTO'},r=document.createElement('div');r.className='procItem';r.innerHTML='<div><b>'+name+'</b><small>'+desc+'</small></div><input class="procCheck" type="checkbox" '+(x.on?'checked':'')+'><select class="procMode"><option>AUTO</option><option>MANUAL</option></select>';let ck=r.querySelector('input'),md=r.querySelector('select');md.value=x.mode;function sv(){cfg.proc[name]={on:ck.checked,mode:md.value};saveCh()}ck.onchange=sv;md.onchange=sv;z.appendChild(r)});document.getElementById('procModal').classList.add('show')}function closeProc(){document.getElementById('procModal').classList.remove('show')}function addSettingsDisplay(){let s=document.getElementById('settings');if(!s||document.getElementById('displayCount'))return;let d=document.createElement('div');d.className='displaySetting';d.innerHTML='<b>CHANNEL DISPLAY</b><small>Channels visible on work screen</small><select id="displayCount" onchange="setDisplayCount(this.value)"><option value="8">8 CH</option><option value="16">16 CH</option><option value="24">24 CH</option><option value="32">32 CH</option></select>';s.prepend(d);document.getElementById('displayCount').value=displayChannels}window.addEventListener('load',()=>setTimeout(()=>{enhance32();addSettingsDisplay()},250));</script><div id="channelSetupPage" class="channelSetupPage">
   <div class="csTop"><button class="csBack" onclick="closeChannelSetup()">‹</button><div class="csHead"><h2>Channel Setup &amp; Preset</h2><small id="csSubtitle">CH 01</small></div></div>
@@ -262,5 +262,28 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   else setTimeout(autoConnectOnLaunch,700);
   window.addEventListener('load',()=>setTimeout(ensureOverviewMeters,300));
   setInterval(ensureOverviewMeters,700);
+})();
+</script><!-- REAL_OVERVIEW_METER_ONLY_V1 -->
+<script id="realOverviewMeterOnly">
+(function(){
+  const previous=window.onM32Meters;
+  window.onM32Meters=function(values){
+    try{
+      if(Array.isArray(values)&&window.channelStates){
+        for(let i=0;i<32;i++){
+          const v=Number(values[i]);
+          channelStates[i].db=Number.isFinite(v)?v:-Infinity;
+        }
+        if(typeof render32Channels==='function')render32Channels();
+      }
+    }catch(e){}
+    if(previous)previous(values);
+  };
+  function clearFake(){
+    try{
+      if(window.channelStates){channelStates.forEach(c=>c.db=-Infinity);if(typeof render32Channels==='function')render32Channels();}
+    }catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clearFake);else clearFake();
 })();
 </script></body></html>
