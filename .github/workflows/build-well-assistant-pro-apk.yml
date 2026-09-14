@@ -6,6 +6,7 @@ on:
       - 'well-assistant-pro-android/**'
       - 'tools/patch_well_assistant_real_m32.py'
       - 'tools/patch_well_assistant_channel_autodetect.py'
+      - 'tools/patch_well_assistant_live_vu_autoconnect.py'
       - '.github/workflows/build-well-assistant-pro-apk.yml'
 permissions:
   contents: write
@@ -18,6 +19,8 @@ jobs:
         run: python3 tools/patch_well_assistant_real_m32.py
       - name: Apply channel setup + auto detect fix
         run: python3 tools/patch_well_assistant_channel_autodetect.py
+      - name: Apply live VU + auto connect
+        run: python3 tools/patch_well_assistant_live_vu_autoconnect.py
       - name: Save requested fixes
         run: |
           git config user.name 'github-actions[bot]'
@@ -26,7 +29,7 @@ jobs:
           if git diff --cached --quiet; then
             echo 'Requested fixes already applied'
           else
-            git commit -m 'Fix channel setup navigation and add M32 auto detect [skip ci]'
+            git commit -m 'Add real M32 VU meters and auto connect [skip ci]'
             git push
           fi
       - uses: actions/setup-java@v4
@@ -41,9 +44,9 @@ jobs:
         working-directory: well-assistant-pro-android
         run: gradle assembleDebug --stacktrace
       - name: Rename APK
-        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-M32-AutoDetect-ChannelFix.apk
+        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-M32-LiveVU-AutoConnect.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Well-Assistant-Pro-M32-AutoDetect-ChannelFix
-          path: Well-Assistant-Pro-M32-AutoDetect-ChannelFix.apk
-# build: channel-fix-autodetect-v1
+          name: Well-Assistant-Pro-M32-LiveVU-AutoConnect
+          path: Well-Assistant-Pro-M32-LiveVU-AutoConnect.apk
+# build: live-vu-autoconnect-v2
