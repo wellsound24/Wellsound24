@@ -1,0 +1,75 @@
+name: Apply Well Assistant Mobile Pro UI
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-well-assistant-mobile-pro-ui.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply responsive professional UI
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('well-assistant-pro-android/app/src/main/assets/index.html')
+          s=p.read_text(encoding='utf-8')
+          start='<!-- WELL_MOBILE_PRO_UI_START -->'
+          end='<!-- WELL_MOBILE_PRO_UI_END -->'
+          if start in s:
+              s=s.split(start)[0]+s.split(end,1)[1]
+          css=r'''<style id="wellMobileProUI">
+          :root{--pro-bg:#07101a;--pro-card:#0d1824;--pro-card2:#101d2a;--pro-line:#263746;--pro-blue:#32a9df;--pro-blue2:#1675a5;--pro-green:#45c987;--pro-text:#f3f7fb;--pro-muted:#91a2b3}
+          body{background:linear-gradient(180deg,#07111c 0%,#09121c 45%,#07101a 100%)!important;color:var(--pro-text)!important}
+          header{padding:14px 16px 12px!important;background:rgba(7,15,24,.96)!important;border-bottom:1px solid #1b2a37!important;backdrop-filter:blur(16px)}
+          header .ey{display:none}.title{font-size:24px!important;letter-spacing:-.02em}.subt{font-size:12px!important;color:var(--pro-muted)!important}
+          main{max-width:1080px!important;padding:12px 14px 110px!important}
+          .card,.mode,.panel{background:linear-gradient(155deg,#101d2a,#0b151f)!important;border-color:var(--pro-line)!important;box-shadow:0 12px 30px rgba(0,0,0,.22)!important}
+          .btn{background:#153b52!important;border:1px solid #2f6c8b!important;color:#eef9ff!important;box-shadow:none!important}.btn.green{background:#143a2d!important;border-color:#2c7659!important}.btn.red{background:#35191e!important;border-color:#77404a!important}.btn.alt{background:#101c27!important;border-color:#2a3947!important}
+          .tabs{background:rgba(7,15,24,.98)!important;border-top:1px solid #223340!important;padding:8px max(6px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left))!important}.tabs button{color:#8092a3!important;font-size:18px!important;min-height:50px}.tabs button.active{color:#55bce8!important}.tabs span{font-size:10px!important;margin-top:3px}
+          .proHome{display:grid;gap:12px}.proStatus{border:1px solid #274052;background:linear-gradient(135deg,#0f1d29,#0b151e);border-radius:18px;padding:15px;display:flex;justify-content:space-between;align-items:center;gap:12px}.proStatusLeft{display:flex;align-items:center;gap:12px}.proLinkIcon{width:44px;height:44px;border-radius:13px;background:#102b3b;border:1px solid #28546d;display:grid;place-items:center;font-size:22px;color:#5fc6f0}.proStatusTitle{font-weight:800;font-size:15px}.proStatusSub{font-size:11px;color:var(--pro-muted);margin-top:3px}.proBadge{font-size:10px;font-weight:800;border:1px solid #345164;border-radius:99px;padding:6px 9px;color:#9ec7dc;background:#0a1822;white-space:nowrap}
+          .proGrid{display:grid;grid-template-columns:1fr;gap:10px}.proCard{border:1px solid var(--pro-line);background:linear-gradient(155deg,#101d2a,#0b151f);border-radius:18px;padding:14px}.proCardTitle{font-size:13px;font-weight:800;margin-bottom:8px;color:#dfeaf2}.proControl{width:100%;background:#0a141d;color:#eef6fb;border:1px solid #2a3c4a;border-radius:12px;padding:12px;font-size:14px}
+          .proWorkspace{border:1px solid #2a3e4d;background:linear-gradient(155deg,#0d1924,#09121a);border-radius:20px;padding:15px}.proWorkspaceHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.proWorkspaceHead h2{font-size:17px}.proWorkspaceHead small{font-size:10px;color:var(--pro-muted)}
+          .proMeters{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.proMeter{background:#09131c;border:1px solid #243746;border-radius:14px;padding:12px}.proMeter span{font-size:9px;color:#8397a8;display:block}.proMeter b{display:block;font-size:20px;margin-top:4px;color:#f1f7fa}.proMeter.good b{color:#64d79d}
+          .proActions{display:grid;grid-template-columns:1fr;gap:9px}.proAction{border:1px solid #2b3e4d;background:linear-gradient(145deg,#122232,#0c1721);border-radius:16px;padding:14px;text-align:left;color:#fff;min-height:84px}.proAction strong{display:block;font-size:15px}.proAction small{display:block;color:#91a2b3;margin-top:5px;font-size:11px}.proAction .arrow{float:right;color:#7ba6bc;font-size:22px}.proAction.primary{border-color:#356b88;background:linear-gradient(145deg,#12344a,#0d2230)}
+          .proQuick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.proQuick button{min-height:70px;border-radius:14px;border:1px solid #2c3f4e;background:#0d1923;color:#eaf3f8;font-weight:800;font-size:11px;padding:8px}.proQuick button:active{background:#142a39}
+          #home .hero,#home>.sec,#home #modes,#home>.conn{display:none!important}
+          #testlab .seg,#testlab .simPower{border-radius:14px}.inputsrc button{min-height:52px!important}.playerWrap{background:#0b151f;border:1px solid #293c4b;border-radius:15px;padding:7px}.playerClose{background:#24151a!important;border-color:#6d3c46!important}
+          .meters{gap:8px!important}.meter{background:#09131c!important;border-color:#263846!important;padding:12px!important}.canvasWrap{background:#061019!important;border-color:#263846!important;border-radius:16px!important}
+          @media(min-width:700px){main{padding:18px 22px 105px!important}.proGrid{grid-template-columns:repeat(3,1fr)}.proMeters{grid-template-columns:repeat(4,1fr)}.proActions{grid-template-columns:repeat(3,1fr)}.proQuick button{font-size:12px}.grid{grid-template-columns:repeat(3,1fr)}.proc{grid-template-columns:1fr 1fr}.inputsrc{grid-template-columns:repeat(3,1fr)}}
+          @media(min-width:980px){.proHome{grid-template-columns:1fr}.proWorkspace{padding:18px}.proAction{min-height:96px}}
+          </style>'''
+          js=r'''<script id="wellMobileProUIScript">
+          (function(){
+            const home=document.getElementById('home');
+            if(home){home.innerHTML=`<div class="proHome">
+              <div class="proStatus"><div class="proStatusLeft"><div class="proLinkIcon">⌁</div><div><div id="proConnTitle" class="proStatusTitle">M32 NOT CONFIGURED</div><div id="proConnSub" class="proStatusSub">Open Settings to enter mixer IP address</div></div></div><button class="proBadge" onclick="go('settings')">SETTINGS</button></div>
+              <div class="proGrid"><div class="proCard"><div class="proCardTitle">INPUT CHANNEL</div><select id="proCh" class="proControl"></select></div><div class="proCard"><div class="proCardTitle">SOURCE TYPE</div><select id="proSrc" class="proControl"><option>Vocal</option><option>Kick</option><option>Snare</option><option>Bass</option><option>Guitar</option><option>Speech</option></select></div><div class="proCard"><div class="proCardTitle">CONTROL TARGET</div><select id="proTarget" class="proControl"><option value="real">Real M32</option><option value="sim">Simulator / Test</option></select></div></div>
+              <div class="proWorkspace"><div class="proWorkspaceHead"><div><h2>Live Workspace</h2><small>Current analyzer status</small></div><button class="proBadge" onclick="go('testlab')">OPEN ANALYZER</button></div><div class="proMeters"><div class="proMeter good"><span>INPUT LEVEL</span><b id="proDb">—</b></div><div class="proMeter"><span>PEAK FREQUENCY</span><b id="proPeak">—</b></div><div class="proMeter"><span>CREST</span><b id="proCrest">—</b></div><div class="proMeter"><span>FEEDBACK</span><b id="proFb">SAFE</b></div></div></div>
+              <div class="proActions"><button class="proAction primary" onclick="go('channels')"><span class="arrow">›</span><strong>EQ / HPF</strong><small>Channel tone and filtering</small></button><button class="proAction" onclick="go('channels')"><span class="arrow">›</span><strong>GATE / COMPRESSOR</strong><small>Dynamics control</small></button><button class="proAction" onclick="go('feedback')"><span class="arrow">›</span><strong>FEEDBACK</strong><small>Detect and manage feedback</small></button></div>
+              <div class="proCard"><div class="proCardTitle">QUICK ACTIONS</div><div class="proQuick"><button onclick="go('testlab');setTimeout(analyzeNow,150)">AUTO ANALYZE</button><button onclick="go('feedback')">FEEDBACK GUARD</button><button onclick="setTarget('real');setTimeout(applyProcessing,120)">APPLY TO M32</button></div></div>
+              <div id="modes" style="display:none"></div>
+            </div>`;}
+            const brandTitle=document.querySelector('header .title'); if(brandTitle) brandTitle.innerHTML='Well <span style="color:#43afe0">Assistant</span> Pro';
+            const brandSub=document.querySelector('header .subt'); if(brandSub) brandSub.textContent='Audio Assistant • M32 Control';
+            const proCh=document.getElementById('proCh'); if(proCh){for(let i=1;i<=32;i++){const o=document.createElement('option');o.value=i;o.textContent='CH '+String(i).padStart(2,'0');proCh.appendChild(o);}proCh.value=document.getElementById('ch')?.value||'1';proCh.onchange=()=>{const c=document.getElementById('ch');if(c)c.value=proCh.value;};}
+            const proSrc=document.getElementById('proSrc'); if(proSrc){proSrc.onchange=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x.textContent===proSrc.value));};}
+            const proTarget=document.getElementById('proTarget'); if(proTarget){proTarget.value=localStorage.target||'real';proTarget.onchange=()=>setTarget(proTarget.value);}
+            function refreshPro(){const ip=localStorage.ip||'';const t=document.getElementById('proConnTitle'),s=document.getElementById('proConnSub');if(t&&s){if(ip){t.textContent='M32 CONFIGURED';s.textContent=ip+':'+(localStorage.port||'10023');}else{t.textContent='M32 NOT CONFIGURED';s.textContent='Open Settings to enter mixer IP address';}}const map=[['proDb','dbfs',' dBFS'],['proPeak','peakHz',' Hz'],['proCrest','crest',' dB']];map.forEach(([a,b,u])=>{const A=document.getElementById(a),B=document.getElementById(b);if(A&&B){const v=B.textContent.trim();A.textContent=(v==='—'||v==='-∞')?v:v+u;}});const pf=document.getElementById('proFb'),fs=document.getElementById('fbstate');if(pf&&fs)pf.textContent=fs.textContent==='DETECTED'?'DETECTED':'SAFE';}
+            setInterval(refreshPro,350);refreshPro();
+          })();
+          </script>'''
+          s=s.replace('</head>',start+css+'</head>')
+          s=s.replace('</body>',js+end+'</body>')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit UI
+        run: |
+          git config user.name wellsound24
+          git config user.email wellsound24@gmail.com
+          git add well-assistant-pro-android/app/src/main/assets/index.html
+          git commit -m "Apply responsive mobile-first professional UI" || exit 0
+          git push
