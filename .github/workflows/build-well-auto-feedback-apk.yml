@@ -21,37 +21,30 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Apply rolling 3-day offline license refresh
+      - name: Disable feedback controls in Flat EQ
         run: |
           python - <<'PY'
           from pathlib import Path
-          p=Path('well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/LicenseActivity.java')
+          p=Path('well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/MainActivity.java')
           s=p.read_text()
-          old='''            // หลัง Activate สำเร็จครั้งแรก ถ้า cache ยังอยู่ในช่วง Offline Grace\n            // ให้เข้าโปรแกรมได้ทันทีโดยไม่ต้องถาม License และไม่บังคับใช้อินเทอร์เน็ต\n            if (!email.isEmpty() && !key.isEmpty() && cachedOfflineAllowed(email, key)) {\n                long last = prefs.getLong("last_verified", 0L);\n                long left = Math.max(0L, OFFLINE_GRACE_MS - (System.currentTimeMillis() - last));\n                long hours = (left + 3599999L) / 3600000L;\n                setStatus("LICENSE ACTIVE • OFFLINE READY", true);\n                expiryText.setText("EXPIRES: " + valueOrLifetime(prefs.getString("expires_at", "")) + " • Offline เหลือประมาณ " + hours + " ชม.");\n                new Handler(getMainLooper()).postDelayed(this::openMainSafely, 250);\n            } else if (!email.isEmpty() && !key.isEmpty()) {\n                // เมื่อ Offline Grace หมด จึงค่อยตรวจออนไลน์ใหม่อัตโนมัติ\n                new Handler(getMainLooper()).postDelayed(() -> verify(email, key, true), 250);\n            } else {\n                setStatus("กรอก Email และ License Key เพื่อเริ่มใช้งานครั้งแรก", null);\n            }'''
-          new='''            // หลัง Activate สำเร็จครั้งแรก ใช้ออฟไลน์ได้ 72 ชั่วโมง\n            // ทุกครั้งที่เปิดแอปภายในช่วงนี้ จะเข้าโปรแกรมได้ทันที และลองต่ออายุ 72 ชั่วโมงแบบเงียบ ๆ หากมีอินเทอร์เน็ต\n            if (!email.isEmpty() && !key.isEmpty() && cachedOfflineAllowed(email, key)) {\n                long last = prefs.getLong("last_verified", 0L);\n                long left = Math.max(0L, OFFLINE_GRACE_MS - (System.currentTimeMillis() - last));\n                long hours = (left + 3599999L) / 3600000L;\n                setStatus("LICENSE ACTIVE • OFFLINE READY", true);\n                expiryText.setText("EXPIRES: " + valueOrLifetime(prefs.getString("expires_at", "")) + " • Offline เหลือประมาณ " + hours + " ชม.");\n                silentRefresh(email, key);\n                new Handler(getMainLooper()).postDelayed(this::openMainSafely, 250);\n            } else if (!email.isEmpty() && !key.isEmpty()) {\n                // ครบ 72 ชั่วโมงแล้ว ต้องออนไลน์ตรวจ License เดิมอีกครั้ง ไม่ต้องกรอก Key ใหม่ถ้ายังไม่หมดอายุ\n                new Handler(getMainLooper()).postDelayed(() -> verify(email, key, true), 250);\n            } else {\n                setStatus("กรอก Email และ License Key เพื่อเริ่มใช้งานครั้งแรก", null);\n            }'''
-          if old not in s:
-              raise SystemExit('license startup block not found')
-          s=s.replace(old,new,1)
-          marker='''    void verify(String email, String key, boolean automatic) {'''
-          method='''    void silentRefresh(String email, String key) {\n        new Thread(() -> {\n            HttpURLConnection c = null;\n            try {\n                JSONObject body = new JSONObject();\n                body.put("product", PRODUCT);\n                body.put("license_key", key);\n                body.put("email", email);\n                body.put("device_id", deviceId());\n                c = (HttpURLConnection) new URL(VERIFY_URL).openConnection();\n                c.setRequestMethod("POST");\n                c.setConnectTimeout(2500); c.setReadTimeout(2500);\n                c.setRequestProperty("Content-Type", "application/json");\n                c.setDoOutput(true);\n                byte[] data = body.toString().getBytes(StandardCharsets.UTF_8);\n                try(OutputStream os=c.getOutputStream()){ os.write(data); }\n                int code = c.getResponseCode();\n                InputStream in = code >= 200 && code < 400 ? c.getInputStream() : c.getErrorStream();\n                JSONObject j = new JSONObject(readAll(in));\n                if (j.optBoolean("allowed", false)) {\n                    String expiry = j.optString("expires_at", prefs.getString("expires_at", ""));\n                    prefs.edit().putString("email", email).putString("license_key", key).putString("expires_at", expiry).putLong("last_verified", System.currentTimeMillis()).apply();\n                }\n            } catch (Exception ignored) {\n                // ไม่มีอินเทอร์เน็ต: คงเวลา Offline เดิมไว้ ไม่ตัดสิทธิ์ระหว่าง 72 ชั่วโมง\n            } finally {\n                if (c != null) c.disconnect();\n            }\n        }).start();\n    }\n\n'''
-          if marker not in s:
-              raise SystemExit('verify marker not found')
-          s=s.replace(marker,method+marker,1)
-          s=s.replace('Activate ครั้งแรกต้องออนไลน์ • หลังตรวจผ่านแล้วครั้งต่อไปเปิดใช้งานได้ทันทีแบบ Offline สูงสุด 72 ชั่วโมง • ครบกำหนดจึงตรวจออนไลน์ใหม่ • หากเปลี่ยนเครื่องให้ Reset Device จาก Well License Dashboard',
-                      'Activate ครั้งแรกต้องออนไลน์ • หลังตรวจผ่านใช้ออฟไลน์ได้ 72 ชั่วโมง • ทุกครั้งที่เปิดแอปและมีอินเทอร์เน็ต ระบบจะต่อเวลา Offline ใหม่อีก 72 ชั่วโมงอัตโนมัติ • ใช้ License เดิมได้จนถึงวันหมดอายุ • หากเปลี่ยนเครื่องให้ Reset Device จาก Well License Dashboard')
+          needle='displayMode.setOnItemSelectedListener(L(v->{analyzer.mode=displayMode.getSelectedItemPosition();analyzer.invalidate();}));'
+          repl='operation.setOnItemSelectedListener(L(v->{updateModeControls();}));'+needle
+          if 'operation.setOnItemSelectedListener(L(v->{updateModeControls();}));' not in s:
+              if needle not in s: raise SystemExit('display listener marker not found')
+              s=s.replace(needle,repl,1)
+          marker='interface A{void go(View v);}'
+          method='void updateModeControls(){boolean feedback=operation!=null&&operation.getSelectedItemPosition()==0;if(delayMs!=null){delayMs.setEnabled(feedback);delayMs.setAlpha(feedback?1.0f:0.35f);}if(recutDelayMs!=null){recutDelayMs.setEnabled(feedback);recutDelayMs.setAlpha(feedback?1.0f:0.35f);}if(cutDb!=null){cutDb.setEnabled(feedback);cutDb.setAlpha(feedback?1.0f:0.35f);}}\n '
+          if 'void updateModeControls()' not in s:
+              if marker not in s: raise SystemExit('interface marker not found')
+              s=s.replace(marker,method+marker,1)
           p.write_text(s)
           PY
-      - name: Save license source
+      - name: Save source fix
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/LicenseActivity.java
-          if git diff --cached --quiet; then
-            echo 'License source already up to date'
-          else
-            git commit -m 'Rolling 72-hour offline license refresh [skip ci]'
-            git push origin HEAD:well-auto-feedback-apk
-          fi
+          git add well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/MainActivity.java
+          if git diff --cached --quiet; then echo 'Source already updated'; else git commit -m 'Disable feedback-only settings in Flat EQ [skip ci]'; git push origin HEAD:well-auto-feedback-apk; fi
       - name: Build debug APK
         working-directory: well-auto-feedback-android
         run: gradle :app:assembleDebug --stacktrace
@@ -69,9 +62,4 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add downloads/Well_Auto_EQ_Pro_v1.0_License.apk
-          if git diff --cached --quiet; then
-            echo 'APK unchanged'
-          else
-            git commit -m 'Publish Well Auto EQ Pro v1.0 rolling offline license [skip ci]'
-            git push origin HEAD:well-auto-feedback-apk
-          fi
+          if git diff --cached --quiet; then echo 'APK unchanged'; else git commit -m 'Publish Well Auto EQ Pro v1.0 Flat EQ control fix [skip ci]'; git push origin HEAD:well-auto-feedback-apk; fi
