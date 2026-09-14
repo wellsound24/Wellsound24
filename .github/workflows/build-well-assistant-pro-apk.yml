@@ -22,9 +22,9 @@ jobs:
         working-directory: well-assistant-pro-android
         run: gradle assembleDebug --stacktrace
       - name: Rename APK
-        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-v1.0.0.apk
+        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-MobileProUI.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Well-Assistant-Pro-APK
-          path: Well-Assistant-Pro-v1.0.0.apk
-# build: player-close-v1
+          name: Well-Assistant-Pro-MobileProUI
+          path: Well-Assistant-Pro-MobileProUI.apk
+# build: mobile-pro-ui-v1
