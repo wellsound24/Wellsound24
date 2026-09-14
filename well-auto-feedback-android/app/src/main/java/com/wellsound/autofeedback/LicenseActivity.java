@@ -22,20 +22,29 @@ public class LicenseActivity extends Activity {
 
     EditText emailInput, keyInput;
     TextView statusText, deviceText, expiryText;
-    Button activateBtn, clearBtn;
+    Button activateBtn, clearBtn, retryBtn;
     SharedPreferences prefs;
     volatile boolean checking = false;
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
-        prefs = getSharedPreferences("well_auto_eq_license", MODE_PRIVATE);
-        buildUi();
-        String email = prefs.getString("email", "");
-        String key = prefs.getString("license_key", "");
-        emailInput.setText(email);
-        keyInput.setText(key);
-        deviceText.setText("DEVICE ID: " + shortDeviceId());
-        if (!email.isEmpty() && !key.isEmpty()) verify(email, key, true);
+        try {
+            prefs = getSharedPreferences("well_auto_eq_license", MODE_PRIVATE);
+            buildUi();
+            String email = prefs.getString("email", "");
+            String key = prefs.getString("license_key", "");
+            emailInput.setText(email);
+            keyInput.setText(key);
+            deviceText.setText("DEVICE ID: " + shortDeviceId());
+            showCachedState();
+            if (!email.isEmpty() && !key.isEmpty()) {
+                new Handler(getMainLooper()).postDelayed(() -> verify(email, key, true), 250);
+            } else {
+                setStatus("กรอก Email และ License Key เพื่อเริ่มใช้งาน", null);
+            }
+        } catch (Throwable e) {
+            showFatalButStay(e);
+        }
     }
 
     void buildUi() {
@@ -46,13 +55,13 @@ public class LicenseActivity extends Activity {
         root.setBackgroundColor(Color.rgb(8, 11, 16));
         sc.addView(root);
 
-        TextView title = text("Well Auto Feedback • M32R", 25, true);
+        TextView title = text("Well Auto EQ Pro • M32R", 25, true);
         root.addView(title);
         TextView sub = text("LICENSE ACTIVATION • Well License Dashboard", 13, false);
         sub.setTextColor(Color.LTGRAY);
         root.addView(sub);
 
-        statusText = text("กำลังตรวจสอบ License...", 16, true);
+        statusText = text("กำลังเตรียมระบบ License...", 16, true);
         statusText.setTextColor(Color.rgb(251, 191, 36));
         statusText.setPadding(0, 24, 0, 16);
         root.addView(statusText);
@@ -78,6 +87,10 @@ public class LicenseActivity extends Activity {
         activateBtn.setText("VERIFY & ACTIVATE");
         root.addView(activateBtn, lp());
 
+        retryBtn = new Button(this);
+        retryBtn.setText("ลองตรวจ License อีกครั้ง");
+        root.addView(retryBtn, lp());
+
         clearBtn = new Button(this);
         clearBtn.setText("CHANGE / CLEAR LICENSE");
         root.addView(clearBtn, lp());
@@ -89,15 +102,19 @@ public class LicenseActivity extends Activity {
         expiryText.setTextColor(Color.LTGRAY);
         root.addView(expiryText);
 
-        TextView note = text("License นี้ผูกกับอุปกรณ์เครื่องแรกที่ Activate • หากเปลี่ยนเครื่อง ให้ Reset Device จาก Well License Dashboard", 12, false);
+        TextView note = text("เปิดใช้งานครั้งแรกต้องออนไลน์ • หลังตรวจผ่านแล้วสามารถใช้งานออฟไลน์ได้สูงสุด 3 วัน • หากเปลี่ยนเครื่องให้ Reset Device จาก Well License Dashboard", 12, false);
         note.setTextColor(Color.GRAY);
         note.setPadding(0, 18, 0, 0);
         root.addView(note);
 
         setContentView(sc);
-        activateBtn.setOnClickListener(v -> verify(emailInput.getText().toString().trim().toLowerCase(Locale.US), keyInput.getText().toString().trim(), false));
+        activateBtn.setOnClickListener(v -> verify(currentEmail(), currentKey(), false));
+        retryBtn.setOnClickListener(v -> verify(currentEmail(), currentKey(), false));
         clearBtn.setOnClickListener(v -> clearLicense());
     }
+
+    String currentEmail(){ return emailInput.getText().toString().trim().toLowerCase(Locale.US); }
+    String currentKey(){ return keyInput.getText().toString().trim(); }
 
     TextView text(String s, int size, boolean bold) {
         TextView v = new TextView(this);
@@ -107,6 +124,28 @@ public class LicenseActivity extends Activity {
     }
     TextView label(String s) { TextView v=text(s,12,true); v.setTextColor(Color.rgb(148,163,184)); return v; }
     LinearLayout.LayoutParams lp(){ LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2); p.setMargins(0,8,0,12); return p; }
+
+    void showFatalButStay(Throwable e) {
+        try {
+            TextView t = new TextView(this);
+            t.setTextColor(Color.WHITE);
+            t.setBackgroundColor(Color.rgb(8,11,16));
+            t.setPadding(30,40,30,40);
+            t.setText("Well Auto EQ Pro\n\nหน้า License มีข้อผิดพลาด แต่แอปจะไม่ปิดเอง\n\n" + String.valueOf(e));
+            setContentView(t);
+        } catch (Throwable ignored) {}
+    }
+
+    void showCachedState(){
+        String exp = prefs.getString("expires_at", "");
+        long last = prefs.getLong("last_verified", 0L);
+        if (!exp.isEmpty()) expiryText.setText("EXPIRES: " + exp);
+        if (last > 0) {
+            long left = Math.max(0L, OFFLINE_GRACE_MS - (System.currentTimeMillis() - last));
+            long hours = (left + 3599999L) / 3600000L;
+            if (left > 0) expiryText.append(" • Offline เหลือประมาณ " + hours + " ชม.");
+        }
+    }
 
     void clearLicense() {
         prefs.edit().clear().apply();
@@ -122,18 +161,19 @@ public class LicenseActivity extends Activity {
             return;
         }
         checking = true;
-        activateBtn.setEnabled(false);
+        activateBtn.setEnabled(false); retryBtn.setEnabled(false);
         setStatus(automatic ? "กำลังตรวจสอบ License อัตโนมัติ..." : "กำลังตรวจสอบ License...", null);
         new Thread(() -> {
+            HttpURLConnection c = null;
             try {
                 JSONObject body = new JSONObject();
                 body.put("product", PRODUCT);
                 body.put("license_key", key);
                 body.put("email", email);
                 body.put("device_id", deviceId());
-                HttpURLConnection c = (HttpURLConnection) new URL(VERIFY_URL).openConnection();
+                c = (HttpURLConnection) new URL(VERIFY_URL).openConnection();
                 c.setRequestMethod("POST");
-                c.setConnectTimeout(6500); c.setReadTimeout(6500);
+                c.setConnectTimeout(8000); c.setReadTimeout(8000);
                 c.setRequestProperty("Content-Type", "application/json");
                 c.setDoOutput(true);
                 byte[] data = body.toString().getBytes(StandardCharsets.UTF_8);
@@ -151,14 +191,14 @@ public class LicenseActivity extends Activity {
                     long now = System.currentTimeMillis();
                     prefs.edit().putString("email", email).putString("license_key", key).putString("expires_at", expiry).putLong("last_verified", now).apply();
                     runOnUiThread(() -> {
-                        checking=false; activateBtn.setEnabled(true);
+                        checking=false; activateBtn.setEnabled(true); retryBtn.setEnabled(true);
                         setStatus(days>=0 && days<=7 ? "LICENSE ACTIVE • ใกล้หมดอายุ" : "LICENSE ACTIVE", true);
-                        expiryText.setText("EXPIRES: "+(expiry.isEmpty()?"-":expiry)+(days>=0?" • เหลือ "+days+" วัน":""));
-                        new Handler(getMainLooper()).postDelayed(this::openMain, 450);
+                        expiryText.setText("EXPIRES: "+(expiry.isEmpty()?"ไม่จำกัด":expiry)+(days>=0?" • เหลือ "+days+" วัน":""));
+                        new Handler(getMainLooper()).postDelayed(this::openMainSafely, 550);
                     });
                 } else {
                     runOnUiThread(() -> {
-                        checking=false; activateBtn.setEnabled(true);
+                        checking=false; activateBtn.setEnabled(true); retryBtn.setEnabled(true);
                         setStatus(messageFor(reason, message), false);
                         expiryText.setText("EXPIRES: "+(expiry.isEmpty()?"-":expiry));
                     });
@@ -166,25 +206,33 @@ public class LicenseActivity extends Activity {
             } catch (Exception e) {
                 boolean offlineOk = cachedOfflineAllowed(email, key);
                 runOnUiThread(() -> {
-                    checking=false; activateBtn.setEnabled(true);
+                    checking=false; activateBtn.setEnabled(true); retryBtn.setEnabled(true);
                     if (offlineOk) {
-                        setStatus("OFFLINE LICENSE CACHE • ใช้งานได้ชั่วคราว", true);
-                        expiryText.setText("EXPIRES: "+prefs.getString("expires_at","-")+" • จะตรวจออนไลน์อีกครั้งเมื่อมีอินเทอร์เน็ต");
-                        new Handler(getMainLooper()).postDelayed(this::openMain, 450);
+                        long last = prefs.getLong("last_verified", 0L);
+                        long left = Math.max(0L, OFFLINE_GRACE_MS - (System.currentTimeMillis() - last));
+                        long hours = (left + 3599999L) / 3600000L;
+                        setStatus("OFFLINE MODE • License ที่เคยตรวจผ่านยังใช้งานได้", true);
+                        expiryText.setText("EXPIRES: "+valueOrLifetime(prefs.getString("expires_at",""))+" • Offline เหลือประมาณ "+hours+" ชม.");
+                        new Handler(getMainLooper()).postDelayed(this::openMainSafely, 550);
                     } else {
-                        setStatus("ตรวจ License ไม่สำเร็จ • กรุณาต่ออินเทอร์เน็ตแล้วลองใหม่", false);
+                        setStatus("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ • ต่ออินเทอร์เน็ตแล้วกด ‘ลองตรวจ License อีกครั้ง’", false);
                     }
                 });
+            } finally {
+                if(c!=null) c.disconnect();
             }
         }).start();
     }
 
+    String valueOrLifetime(String exp){ return exp==null || exp.trim().isEmpty() ? "ไม่จำกัด" : exp; }
+
     boolean cachedOfflineAllowed(String email, String key) {
         if (!email.equals(prefs.getString("email","")) || !key.equals(prefs.getString("license_key",""))) return false;
         long last = prefs.getLong("last_verified", 0L);
-        if (last <= 0 || System.currentTimeMillis() - last > OFFLINE_GRACE_MS) return false;
+        long age = System.currentTimeMillis() - last;
+        if (last <= 0 || age < 0 || age > OFFLINE_GRACE_MS) return false;
         String exp = prefs.getString("expires_at", "");
-        if (exp.isEmpty()) return false;
+        if (exp == null || exp.trim().isEmpty()) return true;
         try {
             SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd", Locale.US); f.setLenient(false);
             Date d = f.parse(exp); Date today = f.parse(f.format(new Date()));
@@ -203,13 +251,21 @@ public class LicenseActivity extends Activity {
         return serverMessage == null || serverMessage.isEmpty() ? "License ใช้งานไม่ได้" : serverMessage;
     }
 
-    void openMain() {
-        Intent i = new Intent(this, MainActivity.class);
-        startActivity(i);
-        finish();
+    void openMainSafely() {
+        try {
+            Intent i = new Intent(this, MainActivity.class);
+            startActivity(i);
+            // ไม่ finish หน้า License ทันที เพื่อป้องกันกรณีหน้าหลักมีปัญหาแล้วผู้ใช้ถูกเด้งออกจากแอป
+            new Handler(getMainLooper()).postDelayed(() -> {
+                if (!isFinishing()) finish();
+            }, 1500);
+        } catch (Throwable e) {
+            setStatus("เปิดหน้าหลักไม่สำเร็จ • แอปจะไม่ปิดเอง กรุณากดลองใหม่", false);
+        }
     }
 
     void setStatus(String s, Boolean good) {
+        if(statusText==null) return;
         statusText.setText(s);
         statusText.setTextColor(good==null ? Color.rgb(251,191,36) : good ? Color.rgb(52,211,153) : Color.rgb(248,113,113));
     }
