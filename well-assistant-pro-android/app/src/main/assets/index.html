@@ -173,4 +173,51 @@ window.onM32Connect=function(ok,msg){setM32UI(ok?'connected':'disconnected',ok?(
 function install(){try{localStorage.target='real';target='real'}catch(e){}const t=document.getElementById('testlab');if(t)t.remove();const tt=document.querySelector('.tabs button[data-p="testlab"]');if(tt)tt.remove();const pt=document.getElementById('proTarget');if(pt&&pt.closest('.proCard'))pt.closest('.proCard').remove();const ts=document.getElementById('targetSel');if(ts&&ts.closest('.row'))ts.closest('.row').remove();const cst=document.querySelector('.csTest');if(cst&&cst.closest('.csCard'))cst.closest('.csCard').remove();document.querySelectorAll('button').forEach(b=>{const x=(b.textContent||'').trim().toUpperCase();if(x.includes('AUTO ANALYZE')||x.includes('TEST LAB'))b.remove()});const home=document.querySelector('#home .proHome');if(home&&!document.getElementById('m32ConnectPanel')){const p=document.createElement('div');p.id='m32ConnectPanel';p.className='m32ConnectPanel';p.innerHTML='<div class="m32ConnectHead"><div><div class="m32ConnectTitle">M32 CONNECTION <span class="realOnlyBadge">REAL MIXER</span></div><small>Same connection style as Well Auto EQ Pro</small></div><div id="m32ConnectState" class="m32ConnectState"><span class="m32ConnectDot"></span>DISCONNECTED</div></div><div class="m32ConnectForm"><input id="m32QuickIp" class="m32ConnectInput" inputmode="decimal" placeholder="M32 IP  •  192.168.1.100"><button id="m32ConnectBtn" class="m32ConnectBtn" onclick="connectM32()">CONNECT</button></div><div class="m32ConnectHint">M32R → LAN → Router • Phone/Tablet → Wi‑Fi Router เดียวกัน</div>';const st=home.querySelector('.proStatus');if(st)st.after(p);else home.prepend(p);document.getElementById('m32QuickIp').value=localStorage.ip||'192.168.1.100'}const settings=document.querySelector('#settings .panel');if(settings&&!document.getElementById('m32SettingsConnect')){const b=document.createElement('button');b.id='m32SettingsConnect';b.className='btn full';b.textContent='CONNECT TO M32';b.onclick=function(){const q=document.getElementById('m32QuickIp'),i=document.getElementById('ip');if(q&&i)q.value=i.value.trim();connectM32()};settings.appendChild(b)}try{setTarget=function(){localStorage.target='real';target='real'}}catch(e){}setM32UI('disconnected',localStorage.ip?('Saved IP '+localStorage.ip+' • Tap CONNECT'):'Enter M32 IP and tap CONNECT')}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,80));else setTimeout(install,80);window.addEventListener('load',()=>setTimeout(install,350));
 })();
+</script><!-- CHANNEL_SETUP_NAV_AUTODETECT_V2 -->
+<style id="channelAutoDetectStyleV2">
+#m32AutoDetectBtn{width:100%;margin-top:8px;border:1px solid #2d7ca2;background:#102536;color:#8fdcff;border-radius:12px;padding:11px 12px;font-weight:900;font-size:12px}
+#m32AutoDetectBtn.busy{opacity:.65}
+</style>
+<script id="channelAutoDetectScriptV2">
+(function(){
+  function openCardSetup(e){
+    const card=e.target&&e.target.closest?e.target.closest('.chStrip'):null;
+    if(!card)return;
+    if(e.target.closest('select,input,.chProcBtn'))return;
+    e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    let n=parseInt(card.dataset.ch||card.getAttribute('data-ch')||'0');
+    if(!n){const cards=[...document.querySelectorAll('.chStrip')];n=cards.indexOf(card)+1;}
+    if(typeof window.openChannelSetup==='function') window.openChannelSetup(n);
+    else if(typeof openChannelSetup==='function') openChannelSetup(n);
+  }
+  document.addEventListener('click',openCardSetup,true);
+
+  window.autoDetectM32=function(){
+    const b=document.getElementById('m32AutoDetectBtn');
+    if(b){b.classList.add('busy');b.textContent='SEARCHING M32R...';b.disabled=true;}
+    try{WellNative.autoDetectM32()}catch(e){window.onM32AutoDetect(false,'','Auto detect unavailable')}
+  };
+  window.onM32AutoDetect=function(ok,ip,msg){
+    const b=document.getElementById('m32AutoDetectBtn');
+    if(b){b.classList.remove('busy');b.textContent='AUTO DETECT M32R';b.disabled=false;}
+    if(ok&&ip){
+      localStorage.ip=ip;
+      const q=document.getElementById('m32QuickIp');if(q)q.value=ip;
+      const ipEl=document.getElementById('ip');if(ipEl)ipEl.value=ip;
+      try{toast('M32R FOUND: '+ip)}catch(e){}
+      if(typeof window.connectM32==='function') window.connectM32();
+    }else{try{toast(msg||'M32R NOT FOUND')}catch(e){}}
+  };
+  function installAutoDetect(){
+    const panel=document.getElementById('m32ConnectPanel');
+    if(panel&&!document.getElementById('m32AutoDetectBtn')){
+      const b=document.createElement('button');
+      b.id='m32AutoDetectBtn';b.textContent='AUTO DETECT M32R';b.onclick=window.autoDetectM32;
+      const form=panel.querySelector('.m32ConnectForm');
+      if(form)form.after(b);else panel.appendChild(b);
+    }
+  }
+  window.addEventListener('load',()=>setTimeout(installAutoDetect,250));
+  setInterval(installAutoDetect,1000);
+})();
 </script></body></html>

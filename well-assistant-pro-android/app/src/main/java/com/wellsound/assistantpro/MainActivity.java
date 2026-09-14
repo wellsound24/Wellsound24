@@ -23,6 +23,11 @@ import java.io.InputStreamReader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.util.LinkedHashSet;
+import java.util.Enumeration;
+import java.util.ArrayList;
+import java.net.NetworkInterface;
+import java.net.Inet4Address;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -221,6 +226,67 @@ public class MainActivity extends Activity {
           callback(false, e.getMessage());
         }
       });
+    }
+
+    @JavascriptInterface public void autoDetectM32() {
+      io.execute(() -> {
+        String found = null;
+        try {
+          for (String prefix : localIpv4Prefixes()) {
+            DatagramSocket ds = null;
+            try {
+              ds = new DatagramSocket();
+              ds.setSoTimeout(140);
+              byte[] msg = encodeOsc("/info", "none", "");
+              for (int i = 1; i <= 254; i++) {
+                try {
+                  InetAddress a = InetAddress.getByName(prefix + i);
+                  ds.send(new DatagramPacket(msg, msg.length, a, 10023));
+                } catch (Exception ignored) {}
+              }
+              long end = System.currentTimeMillis() + 1800;
+              byte[] buf = new byte[4096];
+              while (System.currentTimeMillis() < end && found == null) {
+                try {
+                  DatagramPacket p = new DatagramPacket(buf, buf.length);
+                  ds.receive(p);
+                  found = p.getAddress().getHostAddress();
+                } catch (java.net.SocketTimeoutException timeout) { break; }
+                catch (Exception ignored) {}
+              }
+            } finally {
+              if (ds != null) try { ds.close(); } catch (Exception ignored) {}
+            }
+            if (found != null) break;
+          }
+        } catch (Exception ignored) {}
+        final String f = found;
+        runOnUiThread(() -> webView.evaluateJavascript(
+            "window.onM32AutoDetect&&window.onM32AutoDetect(" + (f != null ? "true" : "false") + "," +
+            (f != null ? "'" + f + "'" : "''") + "," + (f != null ? "'M32R found'" : "'M32R not found'") + ")", null
+        ));
+      });
+    }
+
+    private ArrayList<String> localIpv4Prefixes() {
+      LinkedHashSet<String> out = new LinkedHashSet<>();
+      try {
+        Enumeration<NetworkInterface> es = NetworkInterface.getNetworkInterfaces();
+        while (es.hasMoreElements()) {
+          NetworkInterface ni = es.nextElement();
+          if (!ni.isUp() || ni.isLoopback()) continue;
+          Enumeration<InetAddress> as = ni.getInetAddresses();
+          while (as.hasMoreElements()) {
+            InetAddress a = as.nextElement();
+            if (a instanceof Inet4Address && a.isSiteLocalAddress()) {
+              String x = a.getHostAddress();
+              int k = x.lastIndexOf('.');
+              if (k > 0) out.add(x.substring(0, k + 1));
+            }
+          }
+        }
+      } catch (Exception ignored) {}
+      return new ArrayList<>(out);
     }
 
     @JavascriptInterface public void connectM32(String ip, int port) {
