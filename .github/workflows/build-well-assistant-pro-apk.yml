@@ -22,9 +22,9 @@ jobs:
         working-directory: well-assistant-pro-android
         run: gradle assembleDebug --stacktrace
       - name: Rename APK
-        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-ChannelSetup-FixTapV2.apk
+        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-ChannelSetup-DirectOpenV3.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Well-Assistant-Pro-ChannelSetup-FixTapV2
-          path: Well-Assistant-Pro-ChannelSetup-FixTapV2.apk
-# build: delegated-capture-fixtap-v3
+          name: Well-Assistant-Pro-ChannelSetup-DirectOpenV3
+          path: Well-Assistant-Pro-ChannelSetup-DirectOpenV3.apk
+# build: direct-open-v3
