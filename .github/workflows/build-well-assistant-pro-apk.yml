@@ -9,6 +9,7 @@ on:
       - 'tools/patch_well_assistant_live_vu_autoconnect.py'
       - 'tools/fix_m32_meter_string_type.py'
       - 'tools/patch_well_assistant_real_overview_meter.py'
+      - 'tools/patch_well_assistant_m32_diagnostic.py'
       - '.github/workflows/build-well-assistant-pro-apk.yml'
 permissions:
   contents: write
@@ -27,15 +28,17 @@ jobs:
         run: python3 tools/fix_m32_meter_string_type.py
       - name: Use only real M32 overview meter values
         run: python3 tools/patch_well_assistant_real_overview_meter.py
+      - name: Add M32 live diagnostic panel
+        run: python3 tools/patch_well_assistant_m32_diagnostic.py
       - name: Save requested fixes
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add well-assistant-pro-android/app/src/main/assets/index.html well-assistant-pro-android/app/src/main/java/com/wellsound/assistantpro/MainActivity.java tools/patch_well_assistant_live_vu_autoconnect.py
+          git add well-assistant-pro-android/app/src/main/assets/index.html well-assistant-pro-android/app/src/main/java/com/wellsound/assistantpro/MainActivity.java
           if git diff --cached --quiet; then
             echo 'Requested fixes already applied'
           else
-            git commit -m 'Use real M32 input meters in overview and remove fake levels [skip ci]'
+            git commit -m 'Add M32 live diagnostic panel [skip ci]'
             git push
           fi
       - uses: actions/setup-java@v4
@@ -50,9 +53,9 @@ jobs:
         working-directory: well-assistant-pro-android
         run: gradle assembleDebug --stacktrace
       - name: Rename APK
-        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-M32-RealOverviewMeter.apk
+        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-M32-Diagnostic.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Well-Assistant-Pro-M32-RealOverviewMeter
-          path: Well-Assistant-Pro-M32-RealOverviewMeter.apk
-# build: real-overview-meter-v1
+          name: Well-Assistant-Pro-M32-Diagnostic
+          path: Well-Assistant-Pro-M32-Diagnostic.apk
+# build: m32-diagnostic-v1
