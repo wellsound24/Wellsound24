@@ -101,4 +101,42 @@ function loadPreset(name){let cfg=ensureCfg(csCurrent),p=csPresets[name];if(!p){
 function applyChannelSetup(){csSave();try{toast('Applied settings to CH '+String(csCurrent).padStart(2,'0'))}catch(e){}closeChannelSetup()}
 function wireChannelCards(){let g=document.getElementById('chGrid32');if(!g)return;[...g.children].forEach((c,i)=>{let n=i+1;c.onclick=(e)=>{if(e.target.closest('select,button,input'))return;openChannelSetup(n)}})}
 function channelTapDelegate(e){let card=e.target.closest&&e.target.closest('.chStrip');if(!card)return;let grid=document.getElementById('chGrid32');if(!grid||!grid.contains(card))return;if(e.target.closest('select,button,input,label'))return;e.preventDefault();e.stopPropagation();let cards=[...grid.querySelectorAll('.chStrip')],n=parseInt(card.dataset.ch||'0')||cards.indexOf(card)+1;openChannelSetup(n)}document.addEventListener('click',channelTapDelegate,true);window.addEventListener('load',()=>{setTimeout(wireChannelCards,500);setTimeout(wireChannelCards,1500)});
+</script><script id="channelCardDelegatedOpenV2">
+(function(){
+  function getChannelNumber(card){
+    const grid=document.getElementById('chGrid32');
+    if(!grid||!card)return 0;
+    const cards=Array.from(grid.querySelectorAll('.chStrip'));
+    const idx=cards.indexOf(card);
+    if(idx>=0)return idx+1;
+    const txt=(card.textContent||'').match(/CH\s*0*(\d+)/i);
+    return txt?parseInt(txt[1],10):0;
+  }
+  function handleCardEvent(e){
+    const card=e.target.closest&&e.target.closest('.chStrip');
+    if(!card)return;
+    if(e.target.closest('button,select,input,label,a'))return;
+    const n=getChannelNumber(card);
+    if(!n)return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    if(typeof window.openChannelSetup==='function'){
+      window.openChannelSetup(n);
+    }
+  }
+  document.addEventListener('click',handleCardEvent,true);
+  document.addEventListener('pointerup',function(e){
+    if(e.pointerType==='touch')handleCardEvent(e);
+  },true);
+  window.addEventListener('load',function(){
+    setTimeout(function(){
+      document.querySelectorAll('.chStrip').forEach(function(c){
+        c.style.cursor='pointer';
+        c.setAttribute('role','button');
+        c.setAttribute('tabindex','0');
+      });
+    },700);
+  });
+})();
 </script></body></html>
