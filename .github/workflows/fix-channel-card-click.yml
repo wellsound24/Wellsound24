@@ -1,0 +1,32 @@
+name: Fix Channel Card Click
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-channel-card-click.yml'
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix overview channel tap
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('well-assistant-pro-android/app/src/main/assets/index.html')
+          s=p.read_text()
+          old="window.addEventListener('load',()=>setTimeout(wireChannelCards,500));"
+          new="""function channelTapDelegate(e){let card=e.target.closest&&e.target.closest('.chStrip');if(!card)return;let grid=document.getElementById('chGrid32');if(!grid||!grid.contains(card))return;if(e.target.closest('select,button,input,label'))return;e.preventDefault();e.stopPropagation();let cards=[...grid.querySelectorAll('.chStrip')],n=parseInt(card.dataset.ch||'0')||cards.indexOf(card)+1;openChannelSetup(n)}document.addEventListener('click',channelTapDelegate,true);window.addEventListener('load',()=>{setTimeout(wireChannelCards,500);setTimeout(wireChannelCards,1500)});"""
+          if old not in s:
+              raise SystemExit('target code not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name wellsound24
+          git config user.email wellsound24@gmail.com
+          git add well-assistant-pro-android/app/src/main/assets/index.html
+          git commit -m 'Fix tapping channel cards to open channel setup'
+          git push
