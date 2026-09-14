@@ -4,12 +4,28 @@ on:
   push:
     paths:
       - 'well-assistant-pro-android/**'
+      - 'tools/patch_well_assistant_real_m32.py'
       - '.github/workflows/build-well-assistant-pro-apk.yml'
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Apply Real M32 connect UI
+        run: python3 tools/patch_well_assistant_real_m32.py
+      - name: Save Real M32 mode
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add well-assistant-pro-android/app/src/main/assets/index.html well-assistant-pro-android/app/src/main/java/com/wellsound/assistantpro/MainActivity.java
+          if git diff --cached --quiet; then
+            echo 'Real M32 mode already applied'
+          else
+            git commit -m 'Use real M32 connection and remove simulator UI [skip ci]'
+            git push
+          fi
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -22,9 +38,9 @@ jobs:
         working-directory: well-assistant-pro-android
         run: gradle assembleDebug --stacktrace
       - name: Rename APK
-        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-ProcessingStatus.apk
+        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-M32Connect-RealOnly.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Well-Assistant-Pro-ProcessingStatus
-          path: Well-Assistant-Pro-ProcessingStatus.apk
-# build: processing-status-v1
+          name: Well-Assistant-Pro-M32Connect-RealOnly
+          path: Well-Assistant-Pro-M32Connect-RealOnly.apk
+# build: real-m32-connect-v2
