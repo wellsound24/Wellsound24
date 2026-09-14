@@ -21,30 +21,58 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Disable feedback controls in Flat EQ
+      - name: Apply UI color palette only
         run: |
           python - <<'PY'
           from pathlib import Path
           p=Path('well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/MainActivity.java')
           s=p.read_text()
-          needle='displayMode.setOnItemSelectedListener(L(v->{analyzer.mode=displayMode.getSelectedItemPosition();analyzer.invalidate();}));'
-          repl='operation.setOnItemSelectedListener(L(v->{updateModeControls();}));'+needle
-          if 'operation.setOnItemSelectedListener(L(v->{updateModeControls();}));' not in s:
-              if needle not in s: raise SystemExit('display listener marker not found')
-              s=s.replace(needle,repl,1)
-          marker='interface A{void go(View v);}'
-          method='void updateModeControls(){boolean feedback=operation!=null&&operation.getSelectedItemPosition()==0;if(delayMs!=null){delayMs.setEnabled(feedback);delayMs.setAlpha(feedback?1.0f:0.35f);}if(recutDelayMs!=null){recutDelayMs.setEnabled(feedback);recutDelayMs.setAlpha(feedback?1.0f:0.35f);}if(cutDb!=null){cutDb.setEnabled(feedback);cutDb.setAlpha(feedback?1.0f:0.35f);}}\n '
-          if 'void updateModeControls()' not in s:
-              if marker not in s: raise SystemExit('interface marker not found')
-              s=s.replace(marker,method+marker,1)
+
+          # Background: deep navy like the supplied Well Assistant Pro reference.
+          s=s.replace('r.setBackgroundColor(Color.rgb(8,11,16));','r.setBackgroundColor(Color.rgb(3,18,29));',1)
+
+          # IP field accent only; no layout or logic changes.
+          old='ip.setTextColor(Color.WHITE);r.addView(ip,lp());'
+          new='ip.setTextColor(Color.WHITE);ip.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(14,165,233)));r.addView(ip,lp());'
+          if old in s:
+              s=s.replace(old,new,1)
+
+          # Shared button tone: dark navy/blue. STOP remains red while active via existing logic.
+          old='Button btn(String s){Button b=new Button(this);b.setText(s);return b;}'
+          new='Button btn(String s){Button b=new Button(this);b.setText(s);b.setTextColor(Color.WHITE);b.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(8,63,101)));return b;}'
+          if old in s:
+              s=s.replace(old,new,1)
+
+          # Dropdown accents: blue only, values/behavior unchanged.
+          old='Spinner sp(String[] a,int n){Spinner s=new Spinner(this);s.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,a));s.setSelection(n);return s;}'
+          new='Spinner sp(String[] a,int n){Spinner s=new Spinner(this);s.setAdapter(new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,a));s.setSelection(n);s.setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(14,165,233)));return s;}'
+          if old in s:
+              s=s.replace(old,new,1)
+
+          # Section labels: light blue from reference palette.
+          old='TextView lbl(String s){TextView v=tv(s,12,true);v.setTextColor(Color.LTGRAY);return v;}'
+          new='TextView lbl(String s){TextView v=tv(s,12,true);v.setTextColor(Color.rgb(147,197,253));return v;}'
+          if old in s:
+              s=s.replace(old,new,1)
+
+          # Inactive action button reset tone follows the new navy palette.
+          s=s.replace('Color.rgb(82,82,91)', 'Color.rgb(8,63,101)')
+
+          # GEQ rack palette: keep geometry/data exactly the same, only shift colors.
+          s=s.replace('Color.rgb(16,43,69)', 'Color.rgb(4,34,53)')
+          s=s.replace('Color.rgb(22,58,91)', 'Color.rgb(5,63,99)')
+          s=s.replace('Color.rgb(65,94,121)', 'Color.rgb(20,74,110)')
+          s=s.replace('Color.rgb(70,103,132)', 'Color.rgb(14,116,170)')
+          s=s.replace('Color.rgb(188,208,225)', 'Color.rgb(186,230,253)')
+
           p.write_text(s)
           PY
-      - name: Save source fix
+      - name: Save color-only source change
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/MainActivity.java
-          if git diff --cached --quiet; then echo 'Source already updated'; else git commit -m 'Disable feedback-only settings in Flat EQ [skip ci]'; git push origin HEAD:well-auto-feedback-apk; fi
+          if git diff --cached --quiet; then echo 'Color palette already applied'; else git commit -m 'Apply navy blue UI palette only [skip ci]'; git push origin HEAD:well-auto-feedback-apk; fi
       - name: Build debug APK
         working-directory: well-auto-feedback-android
         run: gradle :app:assembleDebug --stacktrace
@@ -62,4 +90,4 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add downloads/Well_Auto_EQ_Pro_v1.0_License.apk
-          if git diff --cached --quiet; then echo 'APK unchanged'; else git commit -m 'Publish Well Auto EQ Pro v1.0 Flat EQ control fix [skip ci]'; git push origin HEAD:well-auto-feedback-apk; fi
+          if git diff --cached --quiet; then echo 'APK unchanged'; else git commit -m 'Publish Well Auto EQ Pro v1.0 navy UI [skip ci]'; git push origin HEAD:well-auto-feedback-apk; fi
