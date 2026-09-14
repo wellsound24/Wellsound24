@@ -201,6 +201,13 @@ public class MainActivity extends Activity {
     else super.onBackPressed();
   }
 
+  private void m32ConnectCallback(boolean ok, String message) {
+    String msg = safeMsg(message).replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ").replace("\r", " ");
+    runOnUiThread(() -> webView.evaluateJavascript(
+        "window.onM32Connect&&window.onM32Connect(" + (ok ? "true" : "false") + ",'" + msg + "')", null
+    ));
+  }
+
   public class NativeBridge {
     @JavascriptInterface public void send(String ip, int port, String address, String type, String value) {
       io.execute(() -> {
@@ -212,6 +219,28 @@ public class MainActivity extends Activity {
           callback(true, "OSC TX " + address);
         } catch (Exception e) {
           callback(false, e.getMessage());
+        }
+      });
+    }
+
+    @JavascriptInterface public void connectM32(String ip, int port) {
+      io.execute(() -> {
+        DatagramSocket socket = null;
+        try {
+          InetAddress host = InetAddress.getByName(ip);
+          byte[] data = encodeOsc("/info", "none", "");
+          socket = new DatagramSocket();
+          socket.setSoTimeout(1600);
+          socket.send(new DatagramPacket(data, data.length, host, port));
+          byte[] buf = new byte[4096];
+          DatagramPacket reply = new DatagramPacket(buf, buf.length);
+          socket.receive(reply);
+          boolean ok = reply.getAddress().equals(host);
+          m32ConnectCallback(ok, ok ? "M32 replied from " + reply.getAddress().getHostAddress() : "Unexpected reply");
+        } catch (Exception e) {
+          m32ConnectCallback(false, safeMsg(e.getMessage()));
+        } finally {
+          if (socket != null) try { socket.close(); } catch (Exception ignored) {}
         }
       });
     }
