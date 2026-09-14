@@ -5,6 +5,7 @@ on:
     paths:
       - 'well-assistant-pro-android/**'
       - 'tools/patch_well_assistant_real_m32.py'
+      - 'tools/patch_well_assistant_channel_autodetect.py'
       - '.github/workflows/build-well-assistant-pro-apk.yml'
 permissions:
   contents: write
@@ -15,15 +16,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply Real M32 connect UI
         run: python3 tools/patch_well_assistant_real_m32.py
-      - name: Save Real M32 mode
+      - name: Apply channel setup + auto detect fix
+        run: python3 tools/patch_well_assistant_channel_autodetect.py
+      - name: Save requested fixes
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add well-assistant-pro-android/app/src/main/assets/index.html well-assistant-pro-android/app/src/main/java/com/wellsound/assistantpro/MainActivity.java
           if git diff --cached --quiet; then
-            echo 'Real M32 mode already applied'
+            echo 'Requested fixes already applied'
           else
-            git commit -m 'Use real M32 connection and remove simulator UI [skip ci]'
+            git commit -m 'Fix channel setup navigation and add M32 auto detect [skip ci]'
             git push
           fi
       - uses: actions/setup-java@v4
@@ -38,9 +41,9 @@ jobs:
         working-directory: well-assistant-pro-android
         run: gradle assembleDebug --stacktrace
       - name: Rename APK
-        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-M32Connect-RealOnly.apk
+        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-M32-AutoDetect-ChannelFix.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Well-Assistant-Pro-M32Connect-RealOnly
-          path: Well-Assistant-Pro-M32Connect-RealOnly.apk
-# build: real-m32-connect-v2
+          name: Well-Assistant-Pro-M32-AutoDetect-ChannelFix
+          path: Well-Assistant-Pro-M32-AutoDetect-ChannelFix.apk
+# build: channel-fix-autodetect-v1
