@@ -1,0 +1,63 @@
+name: Add Channel Setup Page
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/add-channel-setup-page.yml'
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add channel setup page
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('well-assistant-pro-android/app/src/main/assets/index.html')
+          s=p.read_text()
+          if 'channelSetupPageUI' in s:
+              raise SystemExit(0)
+          css=r'''<style id="channelSetupPageUI">
+          .channelSetupPage{position:fixed;inset:0;z-index:80;background:linear-gradient(180deg,#07111c,#08131d);overflow:auto;padding:18px 14px 110px;display:none;color:#f3f7fb}.channelSetupPage.show{display:block}.csTop{display:flex;align-items:center;gap:10px;margin-bottom:12px}.csBack{width:42px;height:42px;border-radius:12px;border:1px solid #2a4050;background:#0c1a25;color:#fff;font-size:24px}.csHead h2{font-size:20px}.csHead small{color:#8fa3b5}.csCard{border:1px solid #2a3e4d;background:linear-gradient(155deg,#0f1d29,#0a151e);border-radius:18px;padding:14px;margin-top:10px}.csLabel{font-size:11px;color:#8fa3b5;margin-bottom:7px;font-weight:800}.csRow{display:grid;grid-template-columns:1fr auto;gap:8px}.csSelect{width:100%;background:#09151f;color:#fff;border:1px solid #304654;border-radius:12px;padding:12px;font-size:14px}.csNav{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.csNav button,.csBtn{border:1px solid #31516a;background:#102331;color:#e9f5fb;border-radius:12px;padding:11px;font-weight:800}.csProcessing{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.csProc{border:1px solid #2a4050;background:#0b1822;border-radius:14px;padding:10px}.csProcTop{display:flex;justify-content:space-between;align-items:center;gap:8px}.csProc b{font-size:12px}.csProc input{width:20px;height:20px}.csProc select{margin-top:8px;width:100%;background:#08131c;color:#fff;border:1px solid #304654;border-radius:9px;padding:8px;font-size:11px}.csPresetRow{display:grid;grid-template-columns:1fr auto;gap:8px}.csPresetInput{width:100%;background:#08131c;color:#fff;border:1px solid #304654;border-radius:11px;padding:11px}.csPresetList{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}.csPreset{border:1px solid #2b4352;background:#0b1822;color:#dcecf5;border-radius:11px;padding:10px;text-align:left}.csPreset.active{border-color:#2f99ce;background:#0f2940}.csApply{width:100%;margin-top:12px;border:1px solid #31916e;background:linear-gradient(135deg,#164a36,#1d6b4d);color:#cffff0;border-radius:14px;padding:14px;font-weight:900;font-size:14px}.csAutoLoad{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #223542;margin-top:10px;padding-top:10px;color:#90d7b2;font-size:11px}.csAutoLoad input{width:22px;height:22px}.csTest{width:100%;text-align:left;border:1px solid #2b4352;background:#0b1822;color:#e6f2f8;border-radius:13px;padding:13px;font-weight:800}.chStrip{cursor:pointer}
+          @media(min-width:700px){.channelSetupPage{max-width:780px;left:50%;transform:translateX(-50%);border-left:1px solid #203240;border-right:1px solid #203240}.csProcessing{grid-template-columns:repeat(4,1fr)}.csPresetList{grid-template-columns:repeat(3,1fr)}}
+          </style>'''
+          s=s.replace('</head>',css+'</head>')
+          page=r'''<div id="channelSetupPage" class="channelSetupPage">
+            <div class="csTop"><button class="csBack" onclick="closeChannelSetup()">‹</button><div class="csHead"><h2>Channel Setup &amp; Preset</h2><small id="csSubtitle">CH 01</small></div></div>
+            <div class="csCard"><div class="csLabel">INPUT CHANNEL</div><select id="csChannel" class="csSelect" onchange="openChannelSetup(+this.value)"></select><div class="csNav"><button onclick="stepChannel(-1)">‹ PREVIOUS</button><button onclick="stepChannel(1)">NEXT ›</button></div></div>
+            <div class="csCard"><div class="csLabel">SOURCE TYPE</div><select id="csSource" class="csSelect" onchange="csSetSource(this.value)"></select></div>
+            <div class="csCard"><div class="csLabel">PROCESSING</div><div id="csProcessing" class="csProcessing"></div></div>
+            <div class="csCard"><div class="csLabel">SAVE / LOAD PRESET</div><div class="csPresetRow"><input id="csPresetName" class="csPresetInput" placeholder="Preset name"><button class="csBtn" onclick="saveCurrentPreset()">SAVE</button></div><div id="csPresetList" class="csPresetList"></div><div class="csAutoLoad"><span>Auto-load saved settings when this channel is selected</span><input id="csAutoLoad" type="checkbox" onchange="csSetAutoLoad(this.checked)"></div></div>
+            <div class="csCard"><button class="csTest" onclick="go('testlab');closeChannelSetup()">▥ TEST SOUND / ANALYZE ›</button></div>
+            <button id="csApply" class="csApply" onclick="applyChannelSetup()">✓ APPLY SETTINGS TO CH 01</button>
+          </div>'''
+          script=r'''<script id="channelSetupPageJS">
+          let csCurrent=1;let csPresets=JSON.parse(localStorage.getItem('wellChannelPresets')||'{}');
+          function ensureCfg(n){if(!window.chCfg)window.chCfg={};if(!chCfg[n])chCfg[n]={source:'SELECT INPUT TYPE',proc:{},autoLoad:true,preset:''};if(chCfg[n].autoLoad===undefined)chCfg[n].autoLoad=true;return chCfg[n]}
+          function csSave(){try{saveCh()}catch(e){localStorage.setItem('wellChannelConfig',JSON.stringify(chCfg))}localStorage.setItem('wellChannelPresets',JSON.stringify(csPresets))}
+          function setupChannelOptions(){let q=document.getElementById('csChannel');if(q.options.length)return;for(let i=1;i<=32;i++)q.add(new Option('CH '+String(i).padStart(2,'0'),i));let src=document.getElementById('csSource');(window.sourceTypes||['SELECT INPUT TYPE','VOCAL MIC','SPEECH MIC','KICK','SNARE','TOM','HI-HAT','BASS','GUITAR','KEYBOARD','PLAYBACK / DJ','INSTRUMENT','OTHER']).forEach(x=>src.add(new Option(x,x)))}
+          function openChannelSetup(n){setupChannelOptions();csCurrent=Math.max(1,Math.min(32,n||1));let cfg=ensureCfg(csCurrent);document.getElementById('csChannel').value=csCurrent;document.getElementById('csSubtitle').textContent='CH '+String(csCurrent).padStart(2,'0')+' • '+(cfg.source||'SELECT INPUT TYPE');document.getElementById('csSource').value=cfg.source||'SELECT INPUT TYPE';document.getElementById('csAutoLoad').checked=cfg.autoLoad!==false;document.getElementById('csApply').textContent='✓ APPLY SETTINGS TO CH '+String(csCurrent).padStart(2,'0');renderCsProcessing();renderCsPresets();document.getElementById('channelSetupPage').classList.add('show')}
+          function closeChannelSetup(){document.getElementById('channelSetupPage').classList.remove('show');try{enhance32()}catch(e){} }
+          function stepChannel(d){openChannelSetup(Math.max(1,Math.min(32,csCurrent+d)))}
+          function csSetSource(v){let cfg=ensureCfg(csCurrent);cfg.source=v;csSave();document.getElementById('csSubtitle').textContent='CH '+String(csCurrent).padStart(2,'0')+' • '+v;document.getElementById('csPresetName').value=(v==='SELECT INPUT TYPE'?'CH '+csCurrent:v.replace(' MIC',''))+' - Default';try{enhance32()}catch(e){}}
+          function csSetAutoLoad(v){ensureCfg(csCurrent).autoLoad=v;csSave()}
+          function renderCsProcessing(){let cfg=ensureCfg(csCurrent),box=document.getElementById('csProcessing');box.innerHTML='';let pp=window.processors||[['HPF / LOW CUT',''],['GATE',''],['EQ',''],['COMPRESSOR',''],['INSERT / FX',''],['FEEDBACK GUARD',''],['GAIN ASSIST',''],['AUTO MIX','']];pp.forEach(([name])=>{let x=cfg.proc[name]||{on:false,mode:'AUTO'},d=document.createElement('div');d.className='csProc';d.innerHTML='<div class="csProcTop"><b>'+name+'</b><input type="checkbox" '+(x.on?'checked':'')+'></div><select><option>AUTO</option><option>MANUAL</option></select>';let ck=d.querySelector('input'),md=d.querySelector('select');md.value=x.mode||'AUTO';function sv(){cfg.proc[name]={on:ck.checked,mode:md.value};csSave()}ck.onchange=sv;md.onchange=sv;box.appendChild(d)})}
+          function renderCsPresets(){let box=document.getElementById('csPresetList');box.innerHTML='';let cfg=ensureCfg(csCurrent),defaults=['Kick - Default','Snare - Live','Vocal - Male','Vocal - Female','Bass - DI'];let names=[...new Set(defaults.concat(Object.keys(csPresets)))];names.forEach(name=>{let b=document.createElement('button');b.className='csPreset'+(cfg.preset===name?' active':'');b.textContent=name;b.onclick=()=>loadPreset(name);box.appendChild(b)});let src=cfg.source||'';if(!document.getElementById('csPresetName').value)document.getElementById('csPresetName').value=(src&&src!=='SELECT INPUT TYPE'?src.replace(' MIC',''):'CH '+csCurrent)+' - Default'}
+          function saveCurrentPreset(){let name=document.getElementById('csPresetName').value.trim();if(!name)return;let cfg=ensureCfg(csCurrent);csPresets[name]=JSON.parse(JSON.stringify({source:cfg.source,proc:cfg.proc}));cfg.preset=name;csSave();renderCsPresets();try{toast('Preset saved: '+name)}catch(e){}}
+          function loadPreset(name){let cfg=ensureCfg(csCurrent),p=csPresets[name];if(!p){let low=name.toLowerCase();if(low.includes('kick'))cfg.source='KICK';else if(low.includes('snare'))cfg.source='SNARE';else if(low.includes('vocal'))cfg.source='VOCAL MIC';else if(low.includes('bass'))cfg.source='BASS'}else{cfg.source=p.source;cfg.proc=JSON.parse(JSON.stringify(p.proc||{}))}cfg.preset=name;csSave();openChannelSetup(csCurrent)}
+          function applyChannelSetup(){csSave();try{toast('Applied settings to CH '+String(csCurrent).padStart(2,'0'))}catch(e){}closeChannelSetup()}
+          function wireChannelCards(){let g=document.getElementById('chGrid32');if(!g)return;[...g.children].forEach((c,i)=>{let n=i+1;c.onclick=(e)=>{if(e.target.closest('select,button,input'))return;openChannelSetup(n)}})}
+          window.addEventListener('load',()=>setTimeout(wireChannelCards,500));
+          </script>'''
+          s=s.replace('</body>',page+script+'</body>')
+          p.write_text(s)
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name wellsound24
+          git config user.email wellsound24@gmail.com
+          git add well-assistant-pro-android/app/src/main/assets/index.html
+          git diff --cached --quiet || git commit -m 'Add tappable per-channel setup and preset page'
+          git push
