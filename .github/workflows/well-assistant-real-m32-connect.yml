@@ -1,0 +1,126 @@
+name: Well Assistant Real M32 Connect
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/well-assistant-real-m32-connect.yml'
+jobs:
+  patch-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch real M32 connection and remove simulator UI
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          hp=Path('well-assistant-pro-android/app/src/main/assets/index.html')
+          s=hp.read_text()
+          marker='REAL_M32_CONNECT_ONLY_V1'
+          if marker not in s:
+              addon=r'''<!-- REAL_M32_CONNECT_ONLY_V1 -->
+<style id="realM32ConnectOnlyStyle">
+#testlab,.tabs button[data-p="testlab"]{display:none!important}
+.m32ConnectPanel{border:1px solid #294759;background:linear-gradient(155deg,#0f1e2a,#0a151e);border-radius:18px;padding:14px;display:grid;gap:10px}
+.m32ConnectHead{display:flex;align-items:center;justify-content:space-between;gap:10px}.m32ConnectTitle{font-size:14px;font-weight:900}.m32ConnectState{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:900;color:#8ea4b5}.m32ConnectDot{width:9px;height:9px;border-radius:50%;background:#6e7e8c;box-shadow:0 0 0 3px #172632}.m32ConnectState.connected{color:#77dbaa}.m32ConnectState.connected .m32ConnectDot{background:#48cf91;box-shadow:0 0 0 3px #153629}.m32ConnectState.connecting{color:#74c7ef}.m32ConnectState.connecting .m32ConnectDot{background:#38aee4;box-shadow:0 0 0 3px #123247}
+.m32ConnectForm{display:grid;grid-template-columns:1fr 104px;gap:8px}.m32ConnectInput{width:100%;background:#08131c;color:#fff;border:1px solid #304654;border-radius:12px;padding:12px 13px;font-size:14px}.m32ConnectBtn{border:1px solid #2d7ca2;background:linear-gradient(135deg,#135377,#1678a6);color:#f3fbff;border-radius:12px;font-weight:900;font-size:12px}.m32ConnectBtn.connected{border-color:#33805f;background:linear-gradient(135deg,#174d38,#1c704f)}.m32ConnectHint{font-size:10px;color:#8398a9;line-height:1.45}.realOnlyBadge{font-size:9px;border:1px solid #31536a;border-radius:99px;padding:4px 7px;color:#8fc9e7;background:#0d2230}
+@media(min-width:700px){.m32ConnectPanel{grid-template-columns:1fr auto;align-items:center}.m32ConnectHead{grid-column:1/-1}.m32ConnectForm{min-width:390px}.m32ConnectHint{align-self:center}}
+</style>
+<script id="realM32ConnectOnlyScript">
+(function(){
+  window.__m32Connected=false;
+  function setConnectUI(state,msg){
+    const st=document.getElementById('m32ConnectState'),btn=document.getElementById('m32ConnectBtn');
+    if(!st||!btn)return;
+    st.classList.remove('connected','connecting');btn.classList.remove('connected');
+    if(state==='connected'){st.classList.add('connected');st.innerHTML='<span class="m32ConnectDot"></span>CONNECTED';btn.classList.add('connected');btn.textContent='CONNECTED';window.__m32Connected=true;}
+    else if(state==='connecting'){st.classList.add('connecting');st.innerHTML='<span class="m32ConnectDot"></span>CONNECTING';btn.textContent='CONNECT...';window.__m32Connected=false;}
+    else{st.innerHTML='<span class="m32ConnectDot"></span>DISCONNECTED';btn.textContent='CONNECT';window.__m32Connected=false;}
+    const sub=document.getElementById('proConnSub');if(sub&&msg)sub.textContent=msg;
+    const title=document.getElementById('proConnTitle');if(title)title.textContent=state==='connected'?'M32 CONNECTED':state==='connecting'?'CONNECTING TO M32':'M32 DISCONNECTED';
+  }
+  window.connectM32=function(){
+    const ipEl=document.getElementById('m32QuickIp');
+    const ip=(ipEl?ipEl.value:'').trim(); const port=parseInt(localStorage.port||'10023');
+    if(!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)){try{toast('กรุณาใส่ IP ของ M32 ให้ถูกต้อง')}catch(e){};return;}
+    localStorage.ip=ip;localStorage.port=String(port);localStorage.target='real';try{target='real'}catch(e){}
+    const sip=document.getElementById('ip');if(sip)sip.value=ip; const sp=document.getElementById('port');if(sp)sp.value=String(port);
+    setConnectUI('connecting','Checking '+ip+':'+port+' ...');
+    try{WellNative.connectM32(ip,port)}catch(e){setConnectUI('disconnected','Connection bridge unavailable');try{toast('เชื่อมต่อไม่ได้')}catch(x){}}
+  };
+  window.onM32Connect=function(ok,msg){
+    setConnectUI(ok?'connected':'disconnected',ok?((localStorage.ip||'M32')+' • Ready'):(msg||'No response from M32'));
+    try{log((ok?'M32 CONNECTED ':'M32 CONNECT FAIL ')+(msg||''));toast(ok?'เชื่อมต่อ M32 สำเร็จ':'ไม่พบ M32 ตรวจสอบ Router / IP')}catch(e){}
+  };
+  function install(){
+    try{localStorage.target='real';target='real'}catch(e){}
+    const test=document.getElementById('testlab');if(test)test.remove();
+    const testTab=document.querySelector('.tabs button[data-p="testlab"]');if(testTab)testTab.remove();
+    const proTarget=document.getElementById('proTarget');if(proTarget&&proTarget.closest('.proCard'))proTarget.closest('.proCard').remove();
+    const targetSel=document.getElementById('targetSel');if(targetSel&&targetSel.closest('.row'))targetSel.closest('.row').remove();
+    document.querySelectorAll('button').forEach(b=>{const tx=(b.textContent||'').trim().toUpperCase();if(tx.includes('AUTO ANALYZE')||tx.includes('TEST LAB')||tx.includes('SIMULATOR')){if(b.closest('.inputsrc')||b.id==='simPower')return;b.remove();}});
+    const setupTest=document.querySelector('.csTest');if(setupTest&&setupTest.closest('.csCard'))setupTest.closest('.csCard').remove();
+    const home=document.querySelector('#home .proHome');
+    if(home&&!document.getElementById('m32ConnectPanel')){
+      const panel=document.createElement('div');panel.id='m32ConnectPanel';panel.className='m32ConnectPanel';
+      panel.innerHTML='<div class="m32ConnectHead"><div><div class="m32ConnectTitle">M32 CONNECTION <span class="realOnlyBadge">REAL MIXER</span></div><small>Connect through the same Wi-Fi router as the M32R</small></div><div id="m32ConnectState" class="m32ConnectState"><span class="m32ConnectDot"></span>DISCONNECTED</div></div><div class="m32ConnectForm"><input id="m32QuickIp" class="m32ConnectInput" inputmode="decimal" placeholder="M32 IP  •  192.168.1.100"><button id="m32ConnectBtn" class="m32ConnectBtn" onclick="connectM32()">CONNECT</button></div><div class="m32ConnectHint">M32R → LAN → Router &nbsp;•&nbsp; Phone/Tablet → Wi-Fi on the same Router</div>';
+      const status=home.querySelector('.proStatus');if(status)status.after(panel);else home.prepend(panel);
+      const q=document.getElementById('m32QuickIp');if(q)q.value=localStorage.ip||'192.168.1.100';
+    }
+    const oldConnectSettings=document.getElementById('m32SettingsConnect');
+    const settings=document.querySelector('#settings .panel');
+    if(settings&&!oldConnectSettings){
+      const b=document.createElement('button');b.id='m32SettingsConnect';b.className='btn full';b.textContent='CONNECT TO M32';b.onclick=function(){const q=document.getElementById('m32QuickIp'),ip=document.getElementById('ip');if(q&&ip)q.value=ip.value.trim();connectM32()};
+      const save=[...settings.querySelectorAll('button')].find(x=>(x.textContent||'').includes('บันทึก M32'));if(save)save.after(b);else settings.prepend(b);
+    }
+    try{setTarget=function(){localStorage.target='real';target='real'}}catch(e){}
+    setConnectUI('disconnected',localStorage.ip?('Saved IP '+localStorage.ip+' • Tap CONNECT'):'Enter M32 IP and tap CONNECT');
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,50));else setTimeout(install,50);
+  window.addEventListener('load',()=>setTimeout(install,300));
+})();
+</script>'''
+              s=s.replace('</body>',addon+'</body>')
+              s=s.replace('Professional Audio Assistant • Simulator + M32 Control','Professional Audio Assistant • M32R Control')
+              hp.write_text(s)
+
+          jp=Path('well-assistant-pro-android/app/src/main/java/com/wellsound/assistantpro/MainActivity.java')
+          j=jp.read_text()
+          if 'connectM32(String ip, int port)' not in j:
+              needle='''    @JavascriptInterface public void query(String ip, int port, String address) {\n      send(ip, port, address, "none", "");\n    }\n'''
+              method='''    @JavascriptInterface public void connectM32(String ip, int port) {\n      io.execute(() -> {\n        DatagramSocket socket = null;\n        try {\n          InetAddress host = InetAddress.getByName(ip);\n          byte[] data = encodeOsc("/info", "none", "");\n          socket = new DatagramSocket();\n          socket.setSoTimeout(1600);\n          socket.send(new DatagramPacket(data, data.length, host, port));\n          byte[] buf = new byte[4096];\n          DatagramPacket reply = new DatagramPacket(buf, buf.length);\n          socket.receive(reply);\n          boolean fromMixer = reply.getAddress().equals(host);\n          m32ConnectCallback(fromMixer, fromMixer ? "M32 replied from " + reply.getAddress().getHostAddress() : "Unexpected reply");\n        } catch (Exception e) {\n          m32ConnectCallback(false, safeMsg(e.getMessage()));\n        } finally {\n          if (socket != null) try { socket.close(); } catch (Exception ignored) {}\n        }\n      });\n    }\n\n    @JavascriptInterface public void query(String ip, int port, String address) {\n      send(ip, port, address, "none", "");\n    }\n'''
+              if needle not in j: raise SystemExit('query method anchor not found')
+              j=j.replace(needle,method)
+              # add callback helper before NativeBridge
+              anchor='''  public class NativeBridge {\n'''
+              helper='''  private void m32ConnectCallback(boolean ok, String message) {\n    String msg = safeMsg(message).replace("\\\\", "\\\\\\\\").replace("'", "\\\\'").replace("\\n", " ").replace("\\r", " ");\n    runOnUiThread(() -> webView.evaluateJavascript(\n        "window.onM32Connect&&window.onM32Connect(" + (ok ? "true" : "false") + ",'" + msg + "')", null\n    ));\n  }\n\n  public class NativeBridge {\n'''
+              if anchor not in j: raise SystemExit('NativeBridge anchor not found')
+              j=j.replace(anchor,helper,1)
+              jp.write_text(j)
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name wellsound24
+          git config user.email wellsound24@gmail.com
+          git add well-assistant-pro-android/app/src/main/assets/index.html well-assistant-pro-android/app/src/main/java/com/wellsound/assistantpro/MainActivity.java
+          git diff --cached --quiet || git commit -m 'Remove simulator UI and add verified M32 connect button'
+          git push
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Build APK
+        working-directory: well-assistant-pro-android
+        run: gradle assembleDebug --stacktrace
+      - name: Prepare setup APK
+        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-M32Connect-RealOnly.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Well-Assistant-Pro-M32Connect-RealOnly
+          path: Well-Assistant-Pro-M32Connect-RealOnly.apk
