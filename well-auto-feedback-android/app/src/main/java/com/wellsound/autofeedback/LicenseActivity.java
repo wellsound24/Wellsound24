@@ -37,10 +37,21 @@ public class LicenseActivity extends Activity {
             keyInput.setText(key);
             deviceText.setText("DEVICE ID: " + shortDeviceId());
             showCachedState();
-            if (!email.isEmpty() && !key.isEmpty()) {
+
+            // หลัง Activate สำเร็จครั้งแรก ถ้า cache ยังอยู่ในช่วง Offline Grace
+            // ให้เข้าโปรแกรมได้ทันทีโดยไม่ต้องถาม License และไม่บังคับใช้อินเทอร์เน็ต
+            if (!email.isEmpty() && !key.isEmpty() && cachedOfflineAllowed(email, key)) {
+                long last = prefs.getLong("last_verified", 0L);
+                long left = Math.max(0L, OFFLINE_GRACE_MS - (System.currentTimeMillis() - last));
+                long hours = (left + 3599999L) / 3600000L;
+                setStatus("LICENSE ACTIVE • OFFLINE READY", true);
+                expiryText.setText("EXPIRES: " + valueOrLifetime(prefs.getString("expires_at", "")) + " • Offline เหลือประมาณ " + hours + " ชม.");
+                new Handler(getMainLooper()).postDelayed(this::openMainSafely, 250);
+            } else if (!email.isEmpty() && !key.isEmpty()) {
+                // เมื่อ Offline Grace หมด จึงค่อยตรวจออนไลน์ใหม่อัตโนมัติ
                 new Handler(getMainLooper()).postDelayed(() -> verify(email, key, true), 250);
             } else {
-                setStatus("กรอก Email และ License Key เพื่อเริ่มใช้งาน", null);
+                setStatus("กรอก Email และ License Key เพื่อเริ่มใช้งานครั้งแรก", null);
             }
         } catch (Throwable e) {
             showFatalButStay(e);
@@ -102,7 +113,7 @@ public class LicenseActivity extends Activity {
         expiryText.setTextColor(Color.LTGRAY);
         root.addView(expiryText);
 
-        TextView note = text("เปิดใช้งานครั้งแรกต้องออนไลน์ • หลังตรวจผ่านแล้วสามารถใช้งานออฟไลน์ได้สูงสุด 3 วัน • หากเปลี่ยนเครื่องให้ Reset Device จาก Well License Dashboard", 12, false);
+        TextView note = text("Activate ครั้งแรกต้องออนไลน์ • หลังตรวจผ่านแล้วครั้งต่อไปเปิดใช้งานได้ทันทีแบบ Offline สูงสุด 72 ชั่วโมง • ครบกำหนดจึงตรวจออนไลน์ใหม่ • หากเปลี่ยนเครื่องให้ Reset Device จาก Well License Dashboard", 12, false);
         note.setTextColor(Color.GRAY);
         note.setPadding(0, 18, 0, 0);
         root.addView(note);
@@ -213,9 +224,9 @@ public class LicenseActivity extends Activity {
                         long hours = (left + 3599999L) / 3600000L;
                         setStatus("OFFLINE MODE • License ที่เคยตรวจผ่านยังใช้งานได้", true);
                         expiryText.setText("EXPIRES: "+valueOrLifetime(prefs.getString("expires_at",""))+" • Offline เหลือประมาณ "+hours+" ชม.");
-                        new Handler(getMainLooper()).postDelayed(this::openMainSafely, 550);
+                        new Handler(getMainLooper()).postDelayed(this::openMainSafely, 300);
                     } else {
-                        setStatus("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ • ต่ออินเทอร์เน็ตแล้วกด ‘ลองตรวจ License อีกครั้ง’", false);
+                        setStatus("Offline Grace หมดแล้ว • ต่ออินเทอร์เน็ตเพื่อตรวจ License ใหม่", false);
                     }
                 });
             } finally {
@@ -255,7 +266,6 @@ public class LicenseActivity extends Activity {
         try {
             Intent i = new Intent(this, MainActivity.class);
             startActivity(i);
-            // ไม่ finish หน้า License ทันที เพื่อป้องกันกรณีหน้าหลักมีปัญหาแล้วผู้ใช้ถูกเด้งออกจากแอป
             new Handler(getMainLooper()).postDelayed(() -> {
                 if (!isFinishing()) finish();
             }, 1500);
