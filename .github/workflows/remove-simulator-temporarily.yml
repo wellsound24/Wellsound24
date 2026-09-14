@@ -1,0 +1,29 @@
+name: Remove Simulator Temporarily
+on:
+  workflow_dispatch:
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove simulator UI only
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('well-assistant-pro-android/app/src/main/assets/index.html')
+          s=p.read_text()
+          marker='<!-- WELL_SIMULATOR_TEMP_REMOVED -->'
+          if marker not in s:
+              css='''\n<!-- WELL_SIMULATOR_TEMP_REMOVED --><style>\n/* Simulator temporarily removed. Core code retained for later restore. */\n#testlab{display:none!important}\n.tabs button[onclick*="testlab"]{display:none!important}\nselect#proTarget option[value="sim"]{display:none!important}\n.csTest{display:none!important}\n</style>\n<script>\ndocument.addEventListener('DOMContentLoaded',function(){\n const t=document.getElementById('proTarget'); if(t){t.value='real'; t.disabled=true;}\n document.querySelectorAll('[onclick*="testlab"]').forEach(function(el){ if(!el.closest('.tabs')) el.style.display='none'; });\n});\n</script>\n'''
+              s=s.replace('</head>',css+'</head>',1)
+              p.write_text(s)
+          PY
+      - name: Commit
+        run: |
+          git config user.name wellsound24
+          git config user.email wellsound24@gmail.com
+          git add well-assistant-pro-android/app/src/main/assets/index.html
+          git diff --cached --quiet || git commit -m "Temporarily remove simulator from Well Assistant Pro UI"
+          git push
