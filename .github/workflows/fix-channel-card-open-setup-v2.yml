@@ -1,0 +1,71 @@
+name: Fix Channel Card Open Setup V2
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/fix-channel-card-open-setup-v2.yml'
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch delegated channel card navigation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('well-assistant-pro-android/app/src/main/assets/index.html')
+          s=p.read_text()
+          marker='channelCardDelegatedOpenV2'
+          if marker in s:
+              raise SystemExit(0)
+          js=r'''<script id="channelCardDelegatedOpenV2">
+          (function(){
+            function getChannelNumber(card){
+              const grid=document.getElementById('chGrid32');
+              if(!grid||!card)return 0;
+              const cards=Array.from(grid.querySelectorAll('.chStrip'));
+              const idx=cards.indexOf(card);
+              if(idx>=0)return idx+1;
+              const txt=(card.textContent||'').match(/CH\s*0*(\d+)/i);
+              return txt?parseInt(txt[1],10):0;
+            }
+            function handleCardEvent(e){
+              const card=e.target.closest&&e.target.closest('.chStrip');
+              if(!card)return;
+              if(e.target.closest('button,select,input,label,a'))return;
+              const n=getChannelNumber(card);
+              if(!n)return;
+              e.preventDefault();
+              e.stopPropagation();
+              if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+              if(typeof window.openChannelSetup==='function'){
+                window.openChannelSetup(n);
+              }
+            }
+            document.addEventListener('click',handleCardEvent,true);
+            document.addEventListener('pointerup',function(e){
+              if(e.pointerType==='touch')handleCardEvent(e);
+            },true);
+            window.addEventListener('load',function(){
+              setTimeout(function(){
+                document.querySelectorAll('.chStrip').forEach(function(c){
+                  c.style.cursor='pointer';
+                  c.setAttribute('role','button');
+                  c.setAttribute('tabindex','0');
+                });
+              },700);
+            });
+          })();
+          </script>'''
+          s=s.replace('</body>',js+'</body>')
+          p.write_text(s)
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name wellsound24
+          git config user.email wellsound24@gmail.com
+          git add well-assistant-pro-android/app/src/main/assets/index.html
+          git diff --cached --quiet || git commit -m 'Fix channel card tap to open setup using delegated capture handler'
+          git push
