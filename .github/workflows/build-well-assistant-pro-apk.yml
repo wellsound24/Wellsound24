@@ -22,9 +22,9 @@ jobs:
         working-directory: well-assistant-pro-android
         run: gradle assembleDebug --stacktrace
       - name: Rename APK
-        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-ChannelSetup.apk
+        run: cp well-assistant-pro-android/app/build/outputs/apk/debug/app-debug.apk Well-Assistant-Pro-ChannelSetup-FixTap.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Well-Assistant-Pro-ChannelSetup
-          path: Well-Assistant-Pro-ChannelSetup.apk
-# build: channel-setup-v1
+          name: Well-Assistant-Pro-ChannelSetup-FixTap
+          path: Well-Assistant-Pro-ChannelSetup-FixTap.apk
+# build: channel-setup-fixtap-v2
