@@ -21,38 +21,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Apply adaptive feedback cut
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/MainActivity.java')
-          s=p.read_text()
-          old_decl='String mixerIp="192.168.2.200";int fxType=-1;long candStart,lastFlatApply;int candBand=-1,flatFrames;'
-          new_decl='String mixerIp="192.168.2.200";int fxType=-1;long candStart,lastFlatApply,lastFeedbackCut;int candBand=-1,flatFrames,lastFeedbackBand=-1;'
-          if old_decl in s:
-              s=s.replace(old_decl,new_decl,1)
-          old_start='engineRunning=true;candStart=0;candBand=-1;Arrays.fill(flatAvg,0);'
-          new_start='engineRunning=true;candStart=0;candBand=-1;lastFeedbackBand=-1;lastFeedbackCut=0;Arrays.fill(flatAvg,0);'
-          if old_start in s:
-              s=s.replace(old_start,new_start,1)
-          old='void feedback(){int bi=-1;float best=0;for(int i=18;i<94;i++){if(rta[i]<-48||rta[i]<=rta[i-1]||rta[i]<=rta[i+1])continue;float s=0;int n=0;for(int j=i-4;j<=i+4;j++)if(j>=0&&j<100&&Math.abs(j-i)>=2){s+=rta[j];n++;}float ex=rta[i]-s/n;if(ex>6.5&&ex>best){best=ex;bi=i;}}if(bi<0){candStart=0;candBand=-1;return;}int band=nearBand(RF[bi]);if(band!=candBand){candBand=band;candStart=System.currentTimeMillis();return;}long held=System.currentTimeMillis()-candStart;final int uiBand=band;final long uiHeld=held;if(uiBand>=0&&uiBand<GF.length){runOnUiThread(()->candidate.setText("Feedback: "+(int)GF[uiBand]+" Hz • "+uiHeld+" / "+delay()+" ms"));}if(held>=delay()){if(band>=0&&band<31){int p=par(band);float old=cur.containsKey(p)?den(cur.get(p)):0;push();write(band,Math.max(-15,old-cut()));}candStart=0;candBand=-1;}}'
-          new='void feedback(){long now=System.currentTimeMillis();int bi=-1;float best=0;for(int i=18;i<94;i++){if(rta[i]<-48||rta[i]<=rta[i-1]||rta[i]<=rta[i+1])continue;float s=0;int n=0;for(int j=i-4;j<=i+4;j++)if(j>=0&&j<100&&Math.abs(j-i)>=2){s+=rta[j];n++;}float ex=rta[i]-s/n;if(ex>6.5&&ex>best){best=ex;bi=i;}}if(bi<0){candStart=0;candBand=-1;return;}int band=nearBand(RF[bi]);if(band<0||band>=31){candStart=0;candBand=-1;return;}long recheck=Math.max(180,delay());if(band==lastFeedbackBand&&now-lastFeedbackCut<recheck){return;}if(band!=candBand){candBand=band;candStart=now;return;}long held=now-candStart;final int uiBand=band;final long uiHeld=held;runOnUiThread(()->candidate.setText("Feedback: "+(int)GF[uiBand]+" Hz • "+uiHeld+" / "+delay()+" ms"));if(held>=delay()){int p=par(band);float old=cur.containsKey(p)?den(cur.get(p)):0;push();write(band,Math.max(-15,old-cut()));lastFeedbackBand=band;lastFeedbackCut=now;candStart=0;candBand=-1;}}'
-          if old not in s:
-              raise SystemExit('adaptive feedback patch target not found')
-          s=s.replace(old,new,1)
-          p.write_text(s)
-          PY
-      - name: Save adaptive feedback source
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/MainActivity.java
-          if git diff --cached --quiet; then
-            echo 'Adaptive feedback already applied'
-          else
-            git commit -m 'Adaptive one-step feedback cut [skip ci]'
-            git push origin HEAD:well-auto-feedback-apk
-          fi
       - name: Build debug APK
         working-directory: well-auto-feedback-android
         run: gradle :app:assembleDebug --stacktrace
@@ -67,10 +35,12 @@ jobs:
         run: |
           mkdir -p downloads
           cp Well_Auto_EQ_Pro_v1.0_License.apk downloads/Well_Auto_EQ_Pro_v1.0_License.apk
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add downloads/Well_Auto_EQ_Pro_v1.0_License.apk
           if git diff --cached --quiet; then
             echo 'APK unchanged'
           else
-            git commit -m 'Publish Well Auto EQ Pro v1.0 adaptive feedback build [skip ci]'
+            git commit -m 'Publish Well Auto EQ Pro v1.0 BAND RE-CUT DELAY [skip ci]'
             git push origin HEAD:well-auto-feedback-apk
           fi
