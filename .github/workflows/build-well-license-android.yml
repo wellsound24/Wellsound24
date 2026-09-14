@@ -21,10 +21,39 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
+      - name: Add device reset only, keep original UI
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('android-license-app/app/src/main/java/com/wellsound24/licensedashboard/MainActivity.java')
+          s = p.read_text()
+          anchor = "          window.deleteLicenseFromEdit=async function(id){if(!id||!confirm('ยืนยันลบ License นี้?'))return;try{await call(API.core,{action:'archive',id:id});closeModal();toast('ลบ License แล้ว');await refresh();}catch(e){toast('ลบ License ไม่สำเร็จ');}};\n"
+          reset_fn = anchor + "\n          window.resetAutoEqDevice=async function(id){if(!id||!confirm('ยืนยันรีเซ็ตอุปกรณ์ของ License นี้?'))return;try{await call(API.autoEq,{action:'reset_device',id:id});toast('รีเซ็ตอุปกรณ์แล้ว');await refresh();}catch(e){toast('รีเซ็ตอุปกรณ์ไม่สำเร็จ: '+(e.message||e));}};\n"
+          if anchor not in s:
+              raise SystemExit('reset function anchor not found')
+          s = s.replace(anchor, reset_fn, 1)
+
+          old_actions = "<div class=\"modal-actions\">'+(id?'<button type=\"button\" class=\"btn danger\" id=\"deleteLicenseBtn\">ลบ License</button>':'')+'<button type=\"button\" class=\"btn\" onclick=\"closeModal()\">ยกเลิก</button><button class=\"btn primary\">บันทึก</button></div>"
+          new_actions = "<div class=\"modal-actions\">'+(id?'<button type=\"button\" class=\"btn\" id=\"resetDeviceBtn\">รีเซ็ตอุปกรณ์</button><button type=\"button\" class=\"btn danger\" id=\"deleteLicenseBtn\">ลบ License</button>':'')+'<button type=\"button\" class=\"btn\" onclick=\"closeModal()\">ยกเลิก</button><button class=\"btn primary\">บันทึก</button></div>"
+          if old_actions not in s:
+              raise SystemExit('modal actions anchor not found')
+          s = s.replace(old_actions, new_actions, 1)
+
+          old_bind = "bindExpiry('aef');if(id)document.querySelector('#deleteLicenseBtn').onclick=function(){deleteLicenseFromEdit(id)};"
+          new_bind = "bindExpiry('aef');if(id){document.querySelector('#deleteLicenseBtn').onclick=function(){deleteLicenseFromEdit(id)};document.querySelector('#resetDeviceBtn').onclick=function(){resetAutoEqDevice(id)};}"
+          if old_bind not in s:
+              raise SystemExit('button bind anchor not found')
+          s = s.replace(old_bind, new_bind, 1)
+          p.write_text(s)
+
+          g = Path('android-license-app/app/build.gradle')
+          t = g.read_text().replace("versionCode 1", "versionCode 2").replace("versionName '1.0'", "versionName '1.1'")
+          g.write_text(t)
+          PY
       - name: Build debug APK
         working-directory: android-license-app
         run: gradle assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
-          name: WellLicenseDashboard-APK
+          name: WellLicenseDashboard-OriginalUI-DeviceReset
           path: android-license-app/app/build/outputs/apk/debug/app-debug.apk
