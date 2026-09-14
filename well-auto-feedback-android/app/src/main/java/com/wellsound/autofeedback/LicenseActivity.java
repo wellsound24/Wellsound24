@@ -38,17 +38,18 @@ public class LicenseActivity extends Activity {
             deviceText.setText("DEVICE ID: " + shortDeviceId());
             showCachedState();
 
-            // หลัง Activate สำเร็จครั้งแรก ถ้า cache ยังอยู่ในช่วง Offline Grace
-            // ให้เข้าโปรแกรมได้ทันทีโดยไม่ต้องถาม License และไม่บังคับใช้อินเทอร์เน็ต
+            // หลัง Activate สำเร็จครั้งแรก ใช้ออฟไลน์ได้ 72 ชั่วโมง
+            // ทุกครั้งที่เปิดแอปภายในช่วงนี้ จะเข้าโปรแกรมได้ทันที และลองต่ออายุ 72 ชั่วโมงแบบเงียบ ๆ หากมีอินเทอร์เน็ต
             if (!email.isEmpty() && !key.isEmpty() && cachedOfflineAllowed(email, key)) {
                 long last = prefs.getLong("last_verified", 0L);
                 long left = Math.max(0L, OFFLINE_GRACE_MS - (System.currentTimeMillis() - last));
                 long hours = (left + 3599999L) / 3600000L;
                 setStatus("LICENSE ACTIVE • OFFLINE READY", true);
                 expiryText.setText("EXPIRES: " + valueOrLifetime(prefs.getString("expires_at", "")) + " • Offline เหลือประมาณ " + hours + " ชม.");
+                silentRefresh(email, key);
                 new Handler(getMainLooper()).postDelayed(this::openMainSafely, 250);
             } else if (!email.isEmpty() && !key.isEmpty()) {
-                // เมื่อ Offline Grace หมด จึงค่อยตรวจออนไลน์ใหม่อัตโนมัติ
+                // ครบ 72 ชั่วโมงแล้ว ต้องออนไลน์ตรวจ License เดิมอีกครั้ง ไม่ต้องกรอก Key ใหม่ถ้ายังไม่หมดอายุ
                 new Handler(getMainLooper()).postDelayed(() -> verify(email, key, true), 250);
             } else {
                 setStatus("กรอก Email และ License Key เพื่อเริ่มใช้งานครั้งแรก", null);
@@ -113,7 +114,7 @@ public class LicenseActivity extends Activity {
         expiryText.setTextColor(Color.LTGRAY);
         root.addView(expiryText);
 
-        TextView note = text("Activate ครั้งแรกต้องออนไลน์ • หลังตรวจผ่านแล้วครั้งต่อไปเปิดใช้งานได้ทันทีแบบ Offline สูงสุด 72 ชั่วโมง • ครบกำหนดจึงตรวจออนไลน์ใหม่ • หากเปลี่ยนเครื่องให้ Reset Device จาก Well License Dashboard", 12, false);
+        TextView note = text("Activate ครั้งแรกต้องออนไลน์ • หลังตรวจผ่านใช้ออฟไลน์ได้ 72 ชั่วโมง • ทุกครั้งที่เปิดแอปและมีอินเทอร์เน็ต ระบบจะต่อเวลา Offline ใหม่อีก 72 ชั่วโมงอัตโนมัติ • ใช้ License เดิมได้จนถึงวันหมดอายุ • หากเปลี่ยนเครื่องให้ Reset Device จาก Well License Dashboard", 12, false);
         note.setTextColor(Color.GRAY);
         note.setPadding(0, 18, 0, 0);
         root.addView(note);
@@ -163,6 +164,37 @@ public class LicenseActivity extends Activity {
         emailInput.setText(""); keyInput.setText("");
         expiryText.setText("EXPIRES: -");
         setStatus("กรอก Email และ License Key ใหม่", false);
+    }
+
+    void silentRefresh(String email, String key) {
+        new Thread(() -> {
+            HttpURLConnection c = null;
+            try {
+                JSONObject body = new JSONObject();
+                body.put("product", PRODUCT);
+                body.put("license_key", key);
+                body.put("email", email);
+                body.put("device_id", deviceId());
+                c = (HttpURLConnection) new URL(VERIFY_URL).openConnection();
+                c.setRequestMethod("POST");
+                c.setConnectTimeout(2500); c.setReadTimeout(2500);
+                c.setRequestProperty("Content-Type", "application/json");
+                c.setDoOutput(true);
+                byte[] data = body.toString().getBytes(StandardCharsets.UTF_8);
+                try(OutputStream os=c.getOutputStream()){ os.write(data); }
+                int code = c.getResponseCode();
+                InputStream in = code >= 200 && code < 400 ? c.getInputStream() : c.getErrorStream();
+                JSONObject j = new JSONObject(readAll(in));
+                if (j.optBoolean("allowed", false)) {
+                    String expiry = j.optString("expires_at", prefs.getString("expires_at", ""));
+                    prefs.edit().putString("email", email).putString("license_key", key).putString("expires_at", expiry).putLong("last_verified", System.currentTimeMillis()).apply();
+                }
+            } catch (Exception ignored) {
+                // ไม่มีอินเทอร์เน็ต: คงเวลา Offline เดิมไว้ ไม่ตัดสิทธิ์ระหว่าง 72 ชั่วโมง
+            } finally {
+                if (c != null) c.disconnect();
+            }
+        }).start();
     }
 
     void verify(String email, String key, boolean automatic) {
