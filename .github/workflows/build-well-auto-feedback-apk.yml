@@ -21,33 +21,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Apply Well Auto EQ Pro v1.0 RTA fix
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/MainActivity.java')
-          s=p.read_text()
-          s=s.replace('v3.1 startup error','v1.0 startup error')
-          s=s.replace('Well Auto Feedback • M32R','Well Auto EQ Pro • M32R')
-          s=s.replace('Android v3.1 • AUTO DETECT / AUTO CONNECT • STRICT REAL DATA','Android v1.0 • AUTO DETECT / AUTO CONNECT • STRICT REAL DATA')
-          old="else if(z instanceof Float){t.append('f');p.write(ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putFloat((Float)z).array());}}"
-          new="else if(z instanceof Float){t.append('f');p.write(ByteBuffer.allocate(4).order(ByteOrder.BIG_ENDIAN).putFloat((Float)z).array());}else if(z instanceof String){t.append('s');p.write(pad((String)z));}}"
-          if old not in s:
-              raise SystemExit('OSC patch target not found')
-          s=s.replace(old,new,1)
-          p.write_text(s)
-          PY
-      - name: Save source fix
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/MainActivity.java
-          if git diff --cached --quiet; then
-            echo 'Source already fixed'
-          else
-            git commit -m 'Fix Well Auto EQ Pro v1.0 RTA live meter OSC [skip ci]'
-            git push origin HEAD:well-auto-feedback-apk
-          fi
       - name: Build debug APK
         working-directory: well-auto-feedback-android
         run: gradle :app:assembleDebug --stacktrace
@@ -62,10 +35,12 @@ jobs:
         run: |
           mkdir -p downloads
           cp Well_Auto_EQ_Pro_v1.0_License.apk downloads/Well_Auto_EQ_Pro_v1.0_License.apk
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add downloads/Well_Auto_EQ_Pro_v1.0_License.apk
           if git diff --cached --quiet; then
             echo 'APK unchanged'
           else
-            git commit -m 'Publish fixed Well Auto EQ Pro v1.0 APK [skip ci]'
+            git commit -m 'Publish Well Auto EQ Pro v1.0 offline license build [skip ci]'
             git push origin HEAD:well-auto-feedback-apk
           fi
