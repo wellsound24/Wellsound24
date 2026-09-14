@@ -21,6 +21,30 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Fix feedback UI crash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/MainActivity.java')
+          s=p.read_text()
+          old='long held=System.currentTimeMillis()-candStart;runOnUiThread(()->candidate.setText("Feedback: "+(int)GF[candBand]+" Hz • "+held+" / "+delay()+" ms"));if(held>=delay()){int p=par(band);float old=cur.containsKey(p)?den(cur.get(p)):0;push();write(band,Math.max(-15,old-cut()));candStart=0;candBand=-1;}'
+          new='long held=System.currentTimeMillis()-candStart;final int uiBand=band;final long uiHeld=held;if(uiBand>=0&&uiBand<GF.length){runOnUiThread(()->candidate.setText("Feedback: "+(int)GF[uiBand]+" Hz • "+uiHeld+" / "+delay()+" ms"));}if(held>=delay()){if(band>=0&&band<31){int p=par(band);float old=cur.containsKey(p)?den(cur.get(p)):0;push();write(band,Math.max(-15,old-cut()));}candStart=0;candBand=-1;}'
+          if old not in s:
+              raise SystemExit('feedback patch target not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+      - name: Save feedback fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add well-auto-feedback-android/app/src/main/java/com/wellsound/autofeedback/MainActivity.java
+          if git diff --cached --quiet; then
+            echo 'Feedback fix already applied'
+          else
+            git commit -m 'Fix feedback candidate UI crash [skip ci]'
+            git push origin HEAD:well-auto-feedback-apk
+          fi
       - name: Build debug APK
         working-directory: well-auto-feedback-android
         run: gradle :app:assembleDebug --stacktrace
@@ -35,12 +59,10 @@ jobs:
         run: |
           mkdir -p downloads
           cp Well_Auto_EQ_Pro_v1.0_License.apk downloads/Well_Auto_EQ_Pro_v1.0_License.apk
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add downloads/Well_Auto_EQ_Pro_v1.0_License.apk
           if git diff --cached --quiet; then
             echo 'APK unchanged'
           else
-            git commit -m 'Publish Well Auto EQ Pro v1.0 offline license build [skip ci]'
+            git commit -m 'Publish Well Auto EQ Pro v1.0 feedback crash fix [skip ci]'
             git push origin HEAD:well-auto-feedback-apk
           fi
