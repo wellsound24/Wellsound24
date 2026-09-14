@@ -50,6 +50,9 @@ public class MainActivity extends Activity {
   private volatile boolean pendingNativeMicStart = false;
   private AudioRecord audioRecord;
   private Thread audioThread;
+  private volatile boolean m32MeterRunning = false;
+  private volatile String m32MeterHost = null;
+  private Thread m32MeterThread;
 
   @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
   @Override public void onCreate(Bundle b) {
@@ -196,6 +199,7 @@ public class MainActivity extends Activity {
   }
 
   @Override protected void onDestroy() {
+    stopM32MetersInternal();
     stopNativeMicInternal();
     io.shutdownNow();
     super.onDestroy();
@@ -302,6 +306,7 @@ public class MainActivity extends Activity {
           DatagramPacket reply = new DatagramPacket(buf, buf.length);
           socket.receive(reply);
           boolean ok = reply.getAddress().equals(host);
+          if (ok) startM32MetersInternal(ip);
           m32ConnectCallback(ok, ok ? "M32 replied from " + reply.getAddress().getHostAddress() : "Unexpected reply");
         } catch (Exception e) {
           m32ConnectCallback(false, safeMsg(e.getMessage()));
@@ -309,6 +314,16 @@ public class MainActivity extends Activity {
           if (socket != null) try { socket.close(); } catch (Exception ignored) {}
         }
       });
+    }
+
+    @JavascriptInterface public void startM32Meters(String ip) {
+      String host = (ip == null ? "" : ip.trim());
+      if (host.length() == 0) return;
+      startM32MetersInternal(host);
+    }
+
+    @JavascriptInterface public void stopM32Meters() {
+      stopM32MetersInternal();
     }
 
     @JavascriptInterface public void query(String ip, int port, String address) {
@@ -353,6 +368,114 @@ public class MainActivity extends Activity {
           Uri.parse("package:" + getPackageName())
       )));
     }
+  }
+
+  private synchronized void startM32MetersInternal(String host) {
+    if (host == null || host.trim().isEmpty()) return;
+    host = host.trim();
+    if (m32MeterRunning && host.equals(m32MeterHost)) return;
+    stopM32MetersInternal();
+    m32MeterHost = host;
+    m32MeterRunning = true;
+    final String targetHost = host;
+    m32MeterThread = new Thread(() -> runM32MeterLoop(targetHost), "WellM32Meters");
+    m32MeterThread.start();
+  }
+
+  private synchronized void stopM32MetersInternal() {
+    m32MeterRunning = false;
+    Thread t = m32MeterThread;
+    m32MeterThread = null;
+    if (t != null && t != Thread.currentThread()) {
+      try { t.join(180); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    }
+  }
+
+  private void runM32MeterLoop(String host) {
+    DatagramSocket ds = null;
+    try {
+      InetAddress mixer = InetAddress.getByName(host);
+      ds = new DatagramSocket();
+      ds.setSoTimeout(900);
+      long lastSubscribe = 0;
+      long lastPacket = 0;
+      while (m32MeterRunning && host.equals(m32MeterHost)) {
+        long now = System.currentTimeMillis();
+        // /meters subscriptions expire after about 10 s. Renew at 7 s, and re-request after silence.
+        if (lastSubscribe == 0 || now - lastSubscribe > 7000 || (lastPacket > 0 && now - lastPacket > 1800)) {
+          byte[] req = encodeOsc("/meters", "s", "meters/1");
+          ds.send(new DatagramPacket(req, req.length, mixer, 10023));
+          lastSubscribe = now;
+        }
+        try {
+          byte[] buf = new byte[8192];
+          DatagramPacket p = new DatagramPacket(buf, buf.length);
+          ds.receive(p);
+          if (!p.getAddress().equals(mixer)) continue;
+          double[] db = parseM32Meter1(buf, p.getLength());
+          if (db != null && db.length >= 32) {
+            lastPacket = System.currentTimeMillis();
+            pushM32Meters(db);
+          }
+        } catch (java.net.SocketTimeoutException timeout) {
+          // Loop re-subscribes automatically.
+        }
+      }
+    } catch (Exception e) {
+      final String msg = safeMsg(e.getMessage()).replace("\\", "\\\\").replace("'", "\\'");
+      runOnUiThread(() -> webView.evaluateJavascript("window.onM32MeterError&&window.onM32MeterError('" + msg + "')", null));
+    } finally {
+      if (ds != null) try { ds.close(); } catch (Exception ignored) {}
+    }
+  }
+
+  private static int align4(int n) { return (n + 3) & ~3; }
+
+  private static double[] parseM32Meter1(byte[] b, int len) {
+    try {
+      int p = 0;
+      while (p < len && b[p] != 0) p++;
+      if (p >= len) return null;
+      String address = new String(b, 0, p, StandardCharsets.UTF_8);
+      if (!(address.equals("meters/1") || address.equals("/meters/1"))) return null;
+      p = align4(p + 1);
+      int ts = p;
+      while (p < len && b[p] != 0) p++;
+      if (p >= len) return null;
+      String tags = new String(b, ts, p - ts, StandardCharsets.UTF_8);
+      p = align4(p + 1);
+      if (!tags.contains("b") || p + 4 > len) return null;
+      int blobLen = ((b[p] & 255) << 24) | ((b[p+1] & 255) << 16) | ((b[p+2] & 255) << 8) | (b[p+3] & 255);
+      p += 4;
+      if (blobLen < 8 || p + blobLen > len) return null;
+      // First 32-bit value inside the blob is little-endian float count.
+      int count = (b[p] & 255) | ((b[p+1] & 255) << 8) | ((b[p+2] & 255) << 16) | ((b[p+3] & 255) << 24);
+      p += 4;
+      count = Math.min(count, (blobLen - 4) / 4);
+      if (count < 32) return null;
+      double[] out = new double[32];
+      for (int i = 0; i < 32; i++) {
+        int bits = (b[p] & 255) | ((b[p+1] & 255) << 8) | ((b[p+2] & 255) << 16) | ((b[p+3] & 255) << 24);
+        p += 4;
+        float linear = Float.intBitsToFloat(bits);
+        double db = (linear > 0.000001f && Float.isFinite(linear)) ? 20.0 * Math.log10(linear) : -60.0;
+        if (db < -60) db = -60;
+        if (db > 0) db = 0;
+        out[i] = db;
+      }
+      return out;
+    } catch (Exception e) { return null; }
+  }
+
+  private void pushM32Meters(double[] db) {
+    StringBuilder a = new StringBuilder("[");
+    for (int i = 0; i < 32; i++) {
+      if (i > 0) a.append(',');
+      a.append(String.format(Locale.US, "%.1f", db[i]));
+    }
+    a.append(']');
+    final String js = a.toString();
+    runOnUiThread(() -> webView.evaluateJavascript("window.onM32Meters&&window.onM32Meters(" + js + ")", null));
   }
 
   @SuppressLint("MissingPermission")

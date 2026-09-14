@@ -82,7 +82,7 @@ function toggleBypass(){bypass=!bypass;log('BYPASS '+(bypass?'ON (original)':'OF
 })();
 </script><!-- WELL_MOBILE_PRO_UI_END --><script id="well32chJS">
 let selectedOverviewCh=1,allAutoEnabled=false;const channelStates=Array.from({length:32},(_,i)=>({ch:i+1,name:(['Vocal','Kick','Snare','Bass','Guitar','Speech'][i%6]),db:-60+Math.random()*28,auto:true,fb:false}));
-function render32Channels(){let g=document.getElementById('chGrid32');if(!g)return;g.innerHTML='';channelStates.forEach(c=>{let d=document.createElement('button');d.type='button';d.className='chStrip '+(c.ch===selectedOverviewCh?'sel':'');d.onclick=(e)=>{e.preventDefault();e.stopPropagation();selectedOverviewCh=c.ch;let ch=document.getElementById('ch');if(ch)ch.value=c.ch;openChannelSetup(c.ch)};let pct=Math.max(4,Math.min(96,(c.db+70)*2));let status=c.db>-12?'warn':'ok';
+function render32Channels(){let g=document.getElementById('chGrid32');if(!g)return;g.innerHTML='';channelStates.forEach(c=>{let d=document.createElement('button');d.type='button';d.dataset.ch=String(c.ch);d.className='chStrip '+(c.ch===selectedOverviewCh?'sel':'');d.onclick=(e)=>{e.preventDefault();e.stopPropagation();selectedOverviewCh=c.ch;let ch=document.getElementById('ch');if(ch)ch.value=c.ch;openChannelSetup(c.ch)};let pct=Math.max(4,Math.min(96,(c.db+70)*2));let status=c.db>-12?'warn':'ok';
 let saved=(window.chCfg&&chCfg[c.ch])?chCfg[c.ch]:null;
 let srcName=(saved&&saved.source&&saved.source!=='SELECT INPUT TYPE')?saved.source:c.name;
 let proc=(saved&&saved.proc)?saved.proc:{};
@@ -219,5 +219,48 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }
   window.addEventListener('load',()=>setTimeout(installAutoDetect,250));
   setInterval(installAutoDetect,1000);
+})();
+</script><!-- LIVE_M32_VU_AUTOCONNECT_V2 -->
+<style id="liveM32VuStyle">
+.chStrip{position:relative;overflow:hidden}
+.m32VuTrack{position:absolute;right:5px;top:8px;bottom:8px;width:6px;border-radius:6px;background:#101922;border:1px solid #20303d;overflow:hidden;pointer-events:none}
+.m32VuFill{position:absolute;left:0;right:0;bottom:0;height:0%;border-radius:5px;background:#36b6e9;transition:height .06s linear,background .06s linear}
+.m32VuFill.hot{background:#e3ad39}.m32VuFill.clip{background:#e65050}
+#m32AutoStatus{font-size:9px;color:#7f98aa;margin-top:5px}
+</style>
+<script id="liveM32VuScript">
+(function(){
+  function ensureOverviewMeters(){
+    document.querySelectorAll('.chStrip').forEach((card,i)=>{
+      if(!card.dataset.ch)card.dataset.ch=String(i+1);
+      if(!card.querySelector('.m32VuTrack')){
+        const tr=document.createElement('span');tr.className='m32VuTrack';
+        const fl=document.createElement('span');fl.className='m32VuFill';tr.appendChild(fl);card.appendChild(tr);
+      }
+    });
+  }
+  window.onM32Meters=function(values){
+    ensureOverviewMeters();
+    (values||[]).slice(0,32).forEach((db,i)=>{
+      const card=document.querySelector('.chStrip[data-ch="'+(i+1)+'"]')||document.querySelectorAll('.chStrip')[i];
+      if(!card)return;const f=card.querySelector('.m32VuFill');if(!f)return;
+      db=Number(db);if(!Number.isFinite(db))db=-60;
+      const pct=Math.max(0,Math.min(100,(db+60)/60*100));f.style.height=pct+'%';
+      f.className='m32VuFill'+(db>=-3?' clip':db>=-10?' hot':'');
+    });
+  };
+  const prevConnect=window.onM32Connect;
+  window.onM32Connect=function(ok,msg){
+    if(prevConnect)prevConnect(ok,msg);
+    if(ok){try{WellNative.startM32Meters(localStorage.ip||'')}catch(e){}}
+  };
+  function autoConnectOnLaunch(){
+    ensureOverviewMeters();
+    try{WellNative.autoDetectM32()}catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(autoConnectOnLaunch,700));
+  else setTimeout(autoConnectOnLaunch,700);
+  window.addEventListener('load',()=>setTimeout(ensureOverviewMeters,300));
+  setInterval(ensureOverviewMeters,700);
 })();
 </script></body></html>
