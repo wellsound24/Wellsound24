@@ -123,7 +123,7 @@ if 'private synchronized void startM32MetersInternal(String host)' not in j:
         long now = System.currentTimeMillis();
         // /meters subscriptions expire after about 10 s. Renew at 7 s, and re-request after silence.
         if (lastSubscribe == 0 || now - lastSubscribe > 7000 || (lastPacket > 0 && now - lastPacket > 1800)) {
-          byte[] req = encodeOsc("/meters", "s", "meters/1");
+          byte[] req = encodeOsc("/meters", "string", "meters/1");
           ds.send(new DatagramPacket(req, req.length, mixer, 10023));
           lastSubscribe = now;
         }
