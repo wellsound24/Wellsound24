@@ -21,6 +21,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Apply custom app icon
+        run: |
+          mkdir -p well-auto-feedback-android/app/src/main/res/drawable
+          base64 -d well-auto-feedback-android/branding/app_icon.b64 > well-auto-feedback-android/app/src/main/res/drawable/app_icon.jpg
       - name: Apply CUT EACH TIME default -3 dB
         run: |
           python - <<'PY'
@@ -58,4 +62,4 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add downloads/Well_Auto_EQ_Pro_v1.0_License.apk
-          if git diff --cached --quiet; then echo 'APK unchanged'; else git commit -m 'Publish Well Auto EQ Pro v1.0 CUT -3 dB [skip ci]'; git push origin HEAD:well-auto-feedback-apk; fi
+          if git diff --cached --quiet; then echo 'APK unchanged'; else git commit -m 'Publish Well Auto EQ Pro v1.0 custom icon [skip ci]'; git push origin HEAD:well-auto-feedback-apk; fi
