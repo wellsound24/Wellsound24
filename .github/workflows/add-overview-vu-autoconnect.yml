@@ -1,0 +1,98 @@
+name: Add Overview VU + Auto Connect
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch only requested features
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          hp=Path('well-assistant-pro-android/app/src/main/assets/index.html')
+          s=hp.read_text()
+          # Make overview cards expose stable channel ids for live VU updates.
+          old="d.type='button';d.className='chStrip '+(c.ch===selectedOverviewCh?'sel':'');"
+          new="d.type='button';d.dataset.ch=c.ch;d.className='chStrip '+(c.ch===selectedOverviewCh?'sel':'');"
+          if old in s: s=s.replace(old,new,1)
+          marker='OVERVIEW_LIVE_VU_AUTOCONNECT_V1'
+          if marker not in s:
+            addon=r'''<!-- OVERVIEW_LIVE_VU_AUTOCONNECT_V1 -->
+<style>
+.chStrip{position:relative;overflow:hidden}.liveVuTrack{position:absolute;right:5px;top:8px;bottom:8px;width:5px;background:#111b25;border-radius:5px;overflow:hidden;pointer-events:none}.liveVuFill{position:absolute;left:0;right:0;bottom:0;height:0%;background:#39aee8;border-radius:5px;transition:height .07s linear}.liveVuFill.hot{background:#e8b339}.liveVuFill.clip{background:#e84f4f}
+</style>
+<script>
+(function(){
+ function ensureVu(){document.querySelectorAll('.chStrip').forEach((c,i)=>{if(!c.dataset.ch)c.dataset.ch=i+1;if(!c.querySelector('.liveVuTrack')){let t=document.createElement('span');t.className='liveVuTrack';let f=document.createElement('span');f.className='liveVuFill';t.appendChild(f);c.appendChild(t)}})}
+ window.onM32Meters=function(vals){ensureVu();(vals||[]).forEach((v,i)=>{let c=document.querySelector('.chStrip[data-ch="'+(i+1)+'"]');if(!c)return;let f=c.querySelector('.liveVuFill');if(!f)return;let db=Number(v);let p=Math.max(0,Math.min(100,(db+60)/60*100));f.style.height=p+'%';f.className='liveVuFill'+(db>-3?' clip':db>-10?' hot':'')})};
+ let oldConn=window.onM32Connect;window.onM32Connect=function(ok,msg){if(oldConn)oldConn(ok,msg);if(ok){try{WellNative.startM32Meters()}catch(e){}}};
+ function autoStart(){ensureVu();try{WellNative.autoConnectM32()}catch(e){try{WellNative.autoDetectM32()}catch(x){}}}
+ window.addEventListener('load',()=>setTimeout(autoStart,700));setInterval(ensureVu,700);
+})();
+</script>'''
+            s=s.replace('</body>',addon+'</body>')
+          hp.write_text(s)
+
+          jp=Path('well-assistant-pro-android/app/src/main/java/com/wellsound/assistantpro/MainActivity.java')
+          j=jp.read_text()
+          if 'private volatile boolean m32MeterRunning' not in j:
+            j=j.replace('private Thread audioThread;','private Thread audioThread;\n  private volatile boolean m32MeterRunning=false;\n  private volatile String m32Host=null;\n  private Thread m32MeterThread;')
+          anchor='    @JavascriptInterface public void query(String ip, int port, String address) {'
+          if '@JavascriptInterface public void autoConnectM32()' not in j and anchor in j:
+            code=r'''    @JavascriptInterface public void autoConnectM32() {
+      autoDetectM32();
+    }
+
+    @JavascriptInterface public void startM32Meters() {
+      if (m32MeterRunning) return;
+      m32MeterRunning=true;
+      m32MeterThread=new Thread(() -> {
+        DatagramSocket ds=null;
+        try {
+          ds=new DatagramSocket(); ds.setSoTimeout(900);
+          while(m32MeterRunning){
+            String host=m32Host;
+            if(host==null){Thread.sleep(250);continue;}
+            byte[] q=encodeOsc("/meters/1", "none", "");
+            ds.send(new DatagramPacket(q,q.length,InetAddress.getByName(host),10023));
+            try{
+              byte[] buf=new byte[8192]; DatagramPacket p=new DatagramPacket(buf,buf.length); ds.receive(p);
+              final String js=meterPacketToJs(buf,p.getLength());
+              if(js!=null)runOnUiThread(()->webView.evaluateJavascript("window.onM32Meters&&window.onM32Meters("+js+")",null));
+            }catch(java.net.SocketTimeoutException ignored){}
+            Thread.sleep(80);
+          }
+        }catch(Exception ignored){} finally{if(ds!=null)try{ds.close();}catch(Exception ignored){}}
+      }); m32MeterThread.start();
+    }
+
+    private String meterPacketToJs(byte[] b,int len){
+      try{
+        int off=0; while(off<len && b[off]!=0)off++; off=(off+4)&~3;
+        if(off+8>=len)return null; while(off<len && b[off]!=0)off++; off=(off+4)&~3;
+        if(off+4>len)return null; int blob=((b[off]&255)<<24)|((b[off+1]&255)<<16)|((b[off+2]&255)<<8)|(b[off+3]&255); off+=4;
+        if(blob<8||off+blob>len)return null; int count=Math.min(32,blob/4); StringBuilder x=new StringBuilder("[");
+        for(int i=0;i<count;i++){int k=off+i*4; int bits=(b[k]&255)|((b[k+1]&255)<<8)|((b[k+2]&255)<<16)|((b[k+3]&255)<<24); float raw=Float.intBitsToFloat(bits); double db=raw>0?20.0*Math.log10(raw):-60.0; if(i>0)x.append(',');x.append(String.format(java.util.Locale.US,"%.1f",Math.max(-60,Math.min(0,db))));} return x.append(']').toString();
+      }catch(Exception e){return null;}
+    }
+
+'''
+            j=j.replace(anchor,code+anchor,1)
+          # Remember live M32 host on successful direct connection.
+          j=j.replace('boolean ok = reply.getAddress().equals(host);\n          m32ConnectCallback(ok,', 'boolean ok = reply.getAddress().equals(host);\n          if(ok){m32Host=ip;}\n          m32ConnectCallback(ok,',1)
+          # Auto detect should directly remember, connect, and start meters.
+          old='final String f = found;\n        runOnUiThread(() -> webView.evaluateJavascript('
+          new='final String f = found;\n        if(f!=null){m32Host=f; runOnUiThread(() -> { webView.evaluateJavascript("window.onM32AutoDetect&&window.onM32AutoDetect(true,\\\'"+f+"\\\',\\\'M32R found\\\')",null); webView.evaluateJavascript("window.onM32Connect&&window.onM32Connect(true,\\\'AUTO CONNECTED "+f+"\\\')",null); }); startM32Meters(); return;}\n        runOnUiThread(() -> webView.evaluateJavascript('
+          if old in j:j=j.replace(old,new,1)
+          jp.write_text(j)
+          PY
+      - name: Commit
+        run: |
+          git config user.name wellsound24
+          git config user.email wellsound24@gmail.com
+          git add well-assistant-pro-android/app/src/main/assets/index.html well-assistant-pro-android/app/src/main/java/com/wellsound/assistantpro/MainActivity.java
+          git diff --cached --quiet || git commit -m 'Add overview live VU and M32 auto connect'
+          git push
