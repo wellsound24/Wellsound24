@@ -1,23 +1,117 @@
 {
   "rewrites": [
-    {"source":"/admin","destination":"/admin.html"},
-    {"source":"/admin/","destination":"/admin.html"},
-    {"source":"/license","destination":"/license.html"},
-    {"source":"/license/","destination":"/license.html"},
-    {"source":"/well","destination":"/license.html"},
-    {"source":"/well/","destination":"/license.html"},
-    {"source":"/well3","destination":"/well3/index.html"},
-    {"source":"/well3/","destination":"/well3/index.html"},
-    {"source":"/well4","destination":"/standard5/index.html"},
-    {"source":"/well4/","destination":"/standard5/index.html"},
-    {"source":"/well5","destination":"/standard5/index.html"},
-    {"source":"/well5/","destination":"/standard5/index.html"},
-    {"source":"/well6","destination":"/standard6/index.html"},
-    {"source":"/well6/","destination":"/standard6/index.html"},
-    {"source":"/install","destination":"/install/index.html"},
-    {"source":"/install/","destination":"/install/index.html"},
-    {"source":"/reset-admin","destination":"/reset-admin.html"},
-    {"source":"/reset-admin/","destination":"/reset-admin.html"},
-    {"source":"/wellads-original","destination":"https://well-ads-108h1p8ec-wellsound25.vercel.app/?_vercel_share=ChyhB2WyOwIrzVbVViDRiMCHRhtYJPnR"}
+    {
+      "source": "/",
+      "destination": "/api/site"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/admin/",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/license",
+      "destination": "/license.html"
+    },
+    {
+      "source": "/license/",
+      "destination": "/license.html"
+    },
+    {
+      "source": "/well",
+      "destination": "/license.html"
+    },
+    {
+      "source": "/well/",
+      "destination": "/license.html"
+    },
+    {
+      "source": "/well3",
+      "destination": "/well3/index.html"
+    },
+    {
+      "source": "/well3/",
+      "destination": "/well3/index.html"
+    },
+    {
+      "source": "/well4",
+      "destination": "/standard5/index.html"
+    },
+    {
+      "source": "/well4/",
+      "destination": "/standard5/index.html"
+    },
+    {
+      "source": "/well5",
+      "destination": "/standard5/index.html"
+    },
+    {
+      "source": "/well5/",
+      "destination": "/standard5/index.html"
+    },
+    {
+      "source": "/well6",
+      "destination": "/standard6/index.html"
+    },
+    {
+      "source": "/well6/",
+      "destination": "/standard6/index.html"
+    },
+    {
+      "source": "/install",
+      "destination": "/install/index.html"
+    },
+    {
+      "source": "/install/",
+      "destination": "/install/index.html"
+    },
+    {
+      "source": "/reset-admin",
+      "destination": "/reset-admin.html"
+    },
+    {
+      "source": "/reset-admin/",
+      "destination": "/reset-admin.html"
+    },
+    {
+      "source": "/wellads-original",
+      "destination": "https://well-ads-108h1p8ec-wellsound25.vercel.app/?_vercel_share=ChyhB2WyOwIrzVbVViDRiMCHRhtYJPnR"
+    }
+  ],
+  "functions": {
+    "api/site.js": {
+      "includeFiles": "index.html"
+    }
+  },
+  "headers": [
+    {
+      "source": "/admin.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
   ]
 }

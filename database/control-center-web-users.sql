@@ -1,0 +1,12 @@
+create table public.w24_accounts (id uuid primary key default gen_random_uuid(),username text unique not null,display_name text not null,password_salt text not null,password_hash text not null,password_iterations int not null default 120000,enabled boolean not null default true,created_at timestamptz not null default now());
+create table public.w24_sessions (id uuid primary key default gen_random_uuid(),admin_id uuid not null references public.w24_accounts(id) on delete cascade,token_hash text unique not null,expires_at timestamptz not null);
+alter table public.w24_members drop constraint w24_members_admin_id_fkey;
+alter table public.w24_versions drop constraint w24_versions_admin_id_fkey;
+alter table public.w24_accounts enable row level security;
+alter table public.w24_sessions enable row level security;
+revoke all on public.w24_accounts,public.w24_sessions from anon,authenticated;
+grant all on public.w24_accounts,public.w24_sessions to service_role;
+create index w24_events_kind_created on public.w24_events(kind,created_at);
+create index w24_leads_created on public.w24_leads(created_at desc);
+create index w24_rate_expiry on public.w24_rate_limits(expires_at);
+create index w24_sessions_admin on public.w24_sessions(admin_id);
