@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 const escape=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export default async function handler(req,res){
- let html=readFileSync(join(process.cwd(),'index.html'),'utf8');
+ let html=readFileSync(join(process.cwd(),'site-template.html'),'utf8');
  try{
  const response=await fetch('https://sjcxywxixgrpdgeqaepk.supabase.co/functions/v1/wellsound24-control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'public'}),signal:AbortSignal.timeout(5000)});
  if(!response.ok)throw new Error('Content unavailable');

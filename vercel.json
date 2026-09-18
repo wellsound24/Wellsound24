@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/index.html",
+      "destination": "/api/site"
+    },
+    {
       "source": "/",
       "destination": "/api/site"
     },
@@ -83,7 +87,7 @@
   ],
   "functions": {
     "api/site.js": {
-      "includeFiles": "index.html"
+      "includeFiles": "site-template.html"
     }
   },
   "headers": [
