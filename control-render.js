@@ -1,4 +1,5 @@
 import {api,esc,safeUrl} from './control-shared.js';
+import {renderContent} from './content-render.js';
 const editing=new URLSearchParams(location.search).has('editor');
 const preview=new URLSearchParams(location.search).has('preview');
 function installTracking(m){
@@ -10,28 +11,15 @@ function installTracking(m){
  if(localStorage.getItem('w24-marketing')==='yes'){enable();return;}if(localStorage.getItem('w24-marketing')==='no')return;
  const b=document.createElement('div');b.style.cssText='position:fixed;bottom:90px;left:16px;right:16px;z-index:100;background:#202125;border:1px solid #666;padding:20px;max-width:560px;color:white';b.innerHTML='<p>อนุญาตคุกกี้เพื่อวัดผลและปรับปรุงการตลาดหรือไม่?</p><button class="button" data-yes>อนุญาต</button> <button class="button outline" data-no>ไม่อนุญาต</button>';document.body.append(b);b.querySelector('[data-yes]').onclick=()=>{localStorage.setItem('w24-marketing','yes');enable();b.remove();};b.querySelector('[data-no]').onclick=()=>{localStorage.setItem('w24-marketing','no');b.remove();};
 }
-const original=document.querySelector('main').innerHTML;
-const initialSections=[...document.querySelectorAll('main>section')].map(e=>({id:e.dataset.cc,title:e.querySelector('h1,h2')?.textContent.trim()||e.id,hidden:false,type:'original'}));
-const baseSections=new Map([...document.querySelectorAll('main>section')].map(e=>[e.dataset.cc,e.outerHTML]));
+const original=document.querySelector('#w24-original')?.innerHTML||document.querySelector('main').innerHTML;
+const sourceMain=document.createElement('main');sourceMain.innerHTML=original;
+const initialSections=[...sourceMain.querySelectorAll('section[data-cc]')].map(e=>({id:e.dataset.cc,title:e.querySelector('h1,h2')?.textContent.trim()||e.id,hidden:false,type:'original'}));
+const baseSections=new Map([...sourceMain.querySelectorAll('section[data-cc]')].map(e=>[e.dataset.cc,e.outerHTML]));
 let current;
 const text=(q,v)=>document.querySelectorAll(q).forEach(e=>e.textContent=v);
 const setMeta=(name,value,property=false)=>{let e=document.head.querySelector(`meta[${property?'property':'name'}="${name}"]`);if(!e){e=document.createElement('meta');e.setAttribute(property?'property':'name',name);document.head.append(e);}e.content=value||'';};
-function card(item,kind){return `<article class="cc-card">${item.image?`<img src="${esc(safeUrl(item.image))}" alt="${esc(item.title)}" loading="lazy">`:''}<div><small>${esc(item.category||item.date||'')}</small><h3>${esc(item.title)}</h3><p>${esc(item.description).replace(/\n/g,'<br>')}</p>${item.location?`<p>${esc(item.location)}</p>`:''}${item.price?`<strong>${esc(item.price)}</strong>`:''}${item.equipment?`<p>${esc(item.equipment).replace(/\n/g,'<br>')}</p>`:''}${item.images?item.images.split('\n').filter(Boolean).map(src=>`<img src="${esc(safeUrl(src))}" alt="${esc(item.title)}" loading="lazy">`).join(''):''}${item.video?`<video controls preload="metadata" src="${esc(safeUrl(item.video))}"></video>`:''}${kind!=='portfolio'?`<a class="button" href="${esc(safeUrl(item.link||current.settings.line))}">${esc(item.button||'สอบถามรายละเอียด')} ↗</a>`:''}</div></article>`;}
 export function render(c,slug='home'){
- current=c;const page=c.pages.find(p=>p.slug===slug)||c.pages[0];const main=document.querySelector('main');main.innerHTML=slug==='home'?original:'';
- const sections=page.sections;
- main.innerHTML=sections.filter(s=>!s.hidden).map(s=>s.type==='original'?(baseSections.get(s.id)||''):`<section class="section cc-custom" data-cc="${esc(s.id)}" id="${esc(s.id)}"><div class="wrap"><h2>${esc(s.title)}</h2><p>${esc(s.text).replace(/\n/g,'<br>')}</p>${s.image?`<img src="${esc(safeUrl(s.image))}" alt="${esc(s.title)}">`:''}${s.video?`<video controls src="${esc(safeUrl(s.video))}"></video>`:''}${s.button?`<a class="button" href="${esc(safeUrl(s.link))}">${esc(s.button)}</a>`:''}</div></section>`).join('');
- const g=c.settings||{};document.documentElement.style.setProperty('--red',/^#[0-9a-f]{6}$/i.test(g.color)?g.color:'#ed1234');document.documentElement.style.setProperty('--bg',/^#[0-9a-f]{6}$/i.test(g.background)?g.background:'#101112');document.body.style.fontFamily=['Noto Sans Thai','Arial','Tahoma'].includes(g.font)?`"${g.font}",sans-serif`:'"Noto Sans Thai",sans-serif';
- document.querySelectorAll('a[href^="tel:"]').forEach(e=>{e.href='tel:'+String(g.phone||'').replace(/[^+\d]/g,'');if(e.classList.contains('phone'))e.textContent=g.phone;});
- document.querySelectorAll('a[href*="line.me"]').forEach(e=>e.href=safeUrl(g.line));document.querySelectorAll('a[href*="facebook.com"]').forEach(e=>e.href=safeUrl(g.facebook)+(e.href.endsWith('/photos')?'/photos':''));
- document.querySelectorAll('.brand img').forEach(e=>e.src=safeUrl(g.logo));text('.contact-name',g.contactName||g.name);text('.footer-inner>p:not(.en)',g.footer);
- if(g.address){const e=document.createElement('p');e.textContent=g.address;document.querySelector('.contact-name')?.after(e);}
- if(c.menus){document.querySelector('#main-nav').innerHTML=c.menus.filter(x=>!x.hidden).map(x=>`<a class="${x.button?'button':''}" href="${esc(safeUrl(x.link))}">${esc(x.title)}</a>`).join('');}
- for(const kind of ['portfolio','services','packages']){if(c[kind]===null||!c[kind]?.length&&kind==='packages')continue;let box=document.querySelector(kind==='portfolio'?'.gallery':kind==='services'?'.services-grid':'#cc-packages');if(kind==='packages'&&!box){box=document.createElement('section');box.id='cc-packages';box.className='section wrap';box.innerHTML='<h2>แพ็กเกจ</h2><div class="cc-grid"></div>';main.append(box);box=box.lastElementChild;}if(box){box.className='cc-grid';box.innerHTML=c[kind].filter(x=>!x.hidden).map(x=>card(x,kind)).join('');}}
- const styles=['color','backgroundColor','fontSize','fontFamily','paddingTop','paddingBottom','textAlign','maxWidth'];
- for(const [id,p] of Object.entries(page.patches||{})){const el=document.querySelector(`[data-cc="${CSS.escape(id)}"]`);if(!el)continue;if(p.text!==undefined&&!el.querySelector('[data-cc]'))el.textContent=p.text;if(p.directText!==undefined){const nodes=[...el.childNodes].filter(n=>n.nodeType===3);nodes.forEach((n,i)=>n.textContent=i===0?p.directText:'');}if(p.href!==undefined&&el.tagName==='A')el.href=safeUrl(p.href);if(p.src!==undefined&&['IMG','VIDEO'].includes(el.tagName))el.src=safeUrl(p.src);if(p.alt!==undefined&&el.tagName==='IMG')el.alt=p.alt;if(p.hidden!==undefined)el.hidden=p.hidden;for(const k of styles){if(p[k]!==undefined&&/^[#\w\s.,()%'-]{0,100}$/.test(p[k]))el.style[k]=p[k];}}
- for(const s of sections){const el=document.querySelector(`[data-cc="${CSS.escape(s.id)}"]`);if(el&&s.background&&/^#[0-9a-f]{6}$/i.test(s.background))el.style.backgroundColor=s.background;}
- document.title=page.seoTitle||page.title;setMeta('description',page.description);setMeta('og:title',page.seoTitle||page.title,true);setMeta('og:description',page.description,true);setMeta('og:image',safeUrl(page.image),true);
+ current=c;const page=renderContent(document,c,slug,original,baseSections);
  installLead();if(!editing&&!preview){installTracking(c.marketing||{});if(!window.ccTracked){window.ccTracked=true;api('event',{kind:'view',page:page.slug}).catch(()=>{});}}
  bindGallery();
 }

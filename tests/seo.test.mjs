@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {parseHTML} from 'linkedom';
+import {renderPublished} from '../api/site.js';
+import handler from '../api/site.js';
+import sitemap from '../api/sitemap.js';
+import {empty} from '../control-shared.js';
+import {applySEO,EXISTING_VERIFICATION,EXISTING_ADS,normalizeSEO,auditDocument} from '../seo-shared.js';
+const template=readFileSync('site-template.html','utf8');
+function fixture(){const c=empty();c.pages[0].sections=[{id:'el-16',type:'original'},{id:'el-38',type:'original'}];return c;}
+test('published SEO reaches HTML head and body without duplicate canonical or OG tags',()=>{
+ const c=fixture(),p=c.pages[0];Object.assign(p,{seoTitle:'SEO title test',description:'Description test',image:'/assets/hero-led.png',seo:{h1:'Approved H1',h2:'Local services',text:'Bangkok coverage',faq:[{question:'Question?',answer:'Answer.'}],images:[{src:'assets/hero-stage.png',alt:'Approved ALT'}],links:[{title:'Services',url:'/#services'}]}});
+ const {document:d}=parseHTML(renderPublished(template,c));assert.equal(d.title,p.seoTitle);assert.equal(d.querySelector('meta[name="description"]').content,p.description);assert.equal(d.querySelectorAll('link[rel="canonical"]').length,1);assert.equal(d.querySelectorAll('meta[property="og:image"]').length,1);assert.equal(d.querySelector('main h1').textContent,'Approved H1');assert.equal(d.querySelector('main img').getAttribute('alt'),'Approved ALT');assert.match(d.querySelector('#w24-seo-content').textContent,/Question/);assert.equal(d.querySelector('meta[name="google-site-verification"]').content,EXISTING_VERIFICATION);assert.ok(d.toString().includes(EXISTING_ADS));assert.doesNotThrow(()=>JSON.parse(d.querySelector('#w24-seo-schema').textContent));
+ applySEO(d,c,p);assert.equal(d.querySelectorAll('#w24-seo-content').length,1);assert.equal(d.querySelectorAll('#w24-seo-schema').length,1);
+});
+test('unapproved draft never influences public handler and missing pages return 404',async()=>{
+ const published=fixture();published.pages[0].seoTitle='Published only';const old=globalThis.fetch;globalThis.fetch=async()=>new Response(JSON.stringify({published}));const res={statusCode:0,headers:{},setHeader(k,v){this.headers[k]=v;},end(s){this.body=s;}};
+ try{await handler({query:{}},res);assert.match(res.body,/Published only/);assert.equal(res.statusCode,200);await handler({query:{page:'missing'}},res);assert.equal(res.statusCode,404);}finally{globalThis.fetch=old;}
+});
+test('new pages have their own SEO and no homepage FAQ schema',()=>{const c=fixture();c.pages.push({slug:'led',title:'LED',seoTitle:'LED rental',description:'LED page',sections:[],patches:{},seo:{h1:'LED rental',noindex:true}});const {document:d}=parseHTML(renderPublished(template,c,'led'));assert.equal(d.querySelector('link[rel="canonical"]').href,'https://wellsound24.vercel.app/?page=led');assert.equal(d.querySelector('meta[name="robots"]').content,'noindex,follow');assert.equal(d.querySelector('main h1').textContent,'LED rental');assert.ok(![...d.querySelectorAll('script[type="application/ld+json"]')].some(e=>JSON.parse(e.textContent)['@type']==='FAQPage'));});
+test('SEO text and embedded content cannot break out into script',()=>{const c=fixture();c.pages[0].seo={h1:'<img src=x onerror=alert(1)>',text:'</script><script>alert(1)</script>',faq:[{question:'</script>',answer:'<script>alert(1)</script>'}],links:[{title:'unsafe',url:'javascript:alert(1)'}]};const {document:d}=parseHTML(renderPublished(template,c));assert.equal(d.querySelectorAll('#w24-seo-content script').length,0);assert.equal(d.querySelectorAll('img[onerror]').length,0);assert.doesNotThrow(()=>JSON.parse(d.querySelector('#w24-published').textContent));assert.equal(normalizeSEO(c.pages[0].seo).links.length,0);});
+test('existing FAQ, contact, media and template stay available',()=>{const c=fixture();const {document:d}=parseHTML(renderPublished(template,c));assert.ok(d.querySelector('#faq'));assert.ok(d.querySelector('#w24-original'));assert.ok(d.querySelector('a[href="tel:0932614296"]'));assert.ok(d.querySelector('img[src="assets/hero-stage.png"]'));});
+test('audit detects broken anchors, missing ALT and duplicated H1',()=>{const {document:d}=parseHTML('<html><head><title>Test</title></head><body><main><h1>A</h1><h1>B</h1><img src="x"><a href="#missing">Missing</a></main></body></html>');const a=auditDocument(d,'https://example.com');for(const name of ['H1','Image ALT','ลิงก์ภายในหน้า'])assert.equal(a.checks.find(x=>x.name===name).status,'warn');});
+test('sitemap excludes noindex pages and uses published data only',async()=>{const c=fixture();c.pages.push({slug:'private',seo:{noindex:true}},{slug:'led'});const old=globalThis.fetch;globalThis.fetch=async()=>new Response(JSON.stringify({published:c}));const res={setHeader(){},end(s){this.body=s;}};try{await sitemap({},res);assert.ok(!res.body.includes('private'));assert.ok(res.body.includes('?page=led'));assert.equal(res.statusCode,200);}finally{globalThis.fetch=old;}});

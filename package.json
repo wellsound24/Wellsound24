@@ -1,0 +1,11 @@
+{
+  "name": "wellsound24-control-center",
+  "private": true,
+  "scripts": {
+    "build": "node tools/seo-build.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "linkedom": "0.18.12"
+  }
+}
