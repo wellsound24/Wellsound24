@@ -5,6 +5,41 @@
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'AW-11531689060');
+
+  // Track real customer contact clicks as Google Ads conversions.
+  function ws24TrackContact(channel, url, openInNewTab) {
+    gtag('event', channel, { contact_channel: channel });
+    let navigated = false;
+    const go = function () {
+      if (navigated || openInNewTab || !url) return;
+      navigated = true;
+      window.location.href = url;
+    };
+    gtag('event', 'conversion', {
+      'send_to': 'AW-11531689060/6l_kCN_O2oAdEOS43voq',
+      'value': 1.0,
+      'currency': 'THB',
+      'event_callback': go,
+      'event_timeout': 1200
+    });
+    if (!openInNewTab && url) window.setTimeout(go, 1300);
+  }
+
+  document.addEventListener('click', function (event) {
+    const link = event.target.closest('a[href]');
+    if (!link) return;
+    const href = link.getAttribute('href') || '';
+    let channel = '';
+    if (href.startsWith('https://line.me/')) channel = 'line';
+    else if (href.startsWith('https://www.facebook.com/')) channel = 'messenger';
+    else if (href.startsWith('tel:')) channel = 'tel';
+    if (!channel) return;
+    const openInNewTab = link.target === '_blank';
+    if (!openInNewTab && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) {
+      event.preventDefault();
+    }
+    ws24TrackContact(channel, link.href, openInNewTab);
+  }, true);
 </script>
 <title>เช่าเครื่องเสียง ไฟ เวที จอ LED กรุงเทพ | Wellsound24</title><meta name="description" content="Wellsound24 บริการเช่าเครื่องเสียง แสงไฟ เวที จอ LED เครื่องดนตรี และจัดงานอีเวนต์ สำหรับงานแต่ง งานเลี้ยง คอนเสิร์ต พร้อมทีมงานติดตั้งและดูแล"><link rel="canonical" href="https://wellsound24.vercel.app/"><meta name="theme-color" content="#101112"><meta property="og:title" content="เช่าเครื่องเสียง ไฟ เวที จอ LED กรุงเทพ | Wellsound24"><meta property="og:description" content="Wellsound24 บริการเช่าเครื่องเสียง แสงไฟ เวที จอ LED เครื่องดนตรี และจัดงานอีเวนต์ สำหรับงานแต่ง งานเลี้ยง คอนเสิร์ต พร้อมทีมงานติดตั้งและดูแล"><meta property="og:url" content="https://wellsound24.vercel.app/"><meta property="og:type" content="website"><meta property="og:locale" content="th_TH"><meta property="og:site_name" content="Wellsound24"><meta name="twitter:card" content="summary_large_image"><link rel="icon" href="assets/logo.jpg"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
