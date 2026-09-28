@@ -1,3 +1,4 @@
+import {optimizeImages} from './image-shared.js';
 import {esc,safeUrl} from './control-shared.js';
 import {applySEO} from './seo-shared.js';
 export function renderContent(document,c,slug,original,baseSections){
@@ -18,5 +19,10 @@ function card(item,kind){return `<article class="cc-card">${item.image?`<img src
  for(const [id,p] of Object.entries(page.patches||{})){const el=document.querySelector(`[data-cc="${id.replace(/[^a-zA-Z0-9_-]/g,'')}"]`);if(!el)continue;if(p.text!==undefined&&!el.querySelector('[data-cc]'))el.textContent=p.text;if(p.directText!==undefined){const nodes=[...el.childNodes].filter(n=>n.nodeType===3);nodes.forEach((n,i)=>n.textContent=i===0?p.directText:'');}if(p.href!==undefined&&el.tagName==='A')el.href=safeUrl(p.href);if(p.src!==undefined&&['IMG','VIDEO'].includes(el.tagName))el.src=safeUrl(p.src);if(p.alt!==undefined&&el.tagName==='IMG')el.alt=p.alt;if(p.hidden!==undefined)el.hidden=p.hidden;for(const k of styles){if(p[k]!==undefined&&/^[#\w\s.,()%'-]{0,100}$/.test(p[k]))el.style[k]=p[k];}}
  for(const s of sections){const el=document.querySelector(`[data-cc="${String(s.id).replace(/[^a-zA-Z0-9_-]/g,'')}"]`);if(el&&s.background&&/^#[0-9a-f]{6}$/i.test(s.background))el.style.backgroundColor=s.background;}
  applySEO(document,c,page);
+ document.body.setAttribute('data-page',page.slug);
+ if(page.slug!=='home'){
+  document.querySelectorAll('a[href^="#"]').forEach(a=>{const hash=a.getAttribute('href');if(a.closest('.brand')||a.classList.contains('brand')||a.classList.contains('footer-brand'))a.setAttribute('href','/');else if(hash.length>1&&!document.getElementById(hash.slice(1)))a.setAttribute('href','/'+hash);});
+ }
+ optimizeImages(document);
  return page;
 }

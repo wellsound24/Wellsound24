@@ -5,7 +5,7 @@
  window.matchMedia('(min-width:761px)').addEventListener('change',()=>closeMenu());
  const modal=document.querySelector('#photo-dialog'),controls=document.createElement('div');controls.className='photo-controls';controls.innerHTML='<button type="button" aria-label="ภาพก่อนหน้า">←</button><span aria-live="polite"></span><button type="button" aria-label="ภาพถัดไป">→</button>';modal.append(controls);
  let selected=0,photos=[];
- const render=()=>{const img=photos[selected];if(!img)return;modal.querySelector('img').src=img.src;modal.querySelector('img').alt=img.alt;modal.querySelector('.modal-caption').textContent=img.alt;controls.querySelector('span').textContent=`${selected+1} / ${photos.length}`;};
+ const render=()=>{const img=photos[selected];if(!img)return;modal.querySelector('img').src=img.dataset.fullSrc||img.src;modal.querySelector('img').alt=img.alt;modal.querySelector('.modal-caption').textContent=img.alt;controls.querySelector('span').textContent=`${selected+1} / ${photos.length}`;};
  document.addEventListener('click',e=>{const b=e.target.closest('.photo-open');if(!b)return;photos=[...document.querySelectorAll('.work-card:not([hidden]) .photo-open img')];selected=photos.indexOf(b.querySelector('img'));render();});
  const move=n=>{if(!photos.length)return;selected=(selected+n+photos.length)%photos.length;render();};controls.firstElementChild.onclick=()=>move(-1);controls.lastElementChild.onclick=()=>move(1);modal.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();move(e.key==='ArrowLeft'?-1:1);}});
 })();
