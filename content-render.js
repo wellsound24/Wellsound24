@@ -20,7 +20,8 @@ function card(item,kind){return `<article class="cc-card">${item.image?`<img src
  for(const s of sections){const el=document.querySelector(`[data-cc="${String(s.id).replace(/[^a-zA-Z0-9_-]/g,'')}"]`);if(el&&s.background&&/^#[0-9a-f]{6}$/i.test(s.background))el.style.backgroundColor=s.background;}
  const lineConsult='https://line.me/R/ti/p/@733tahwc';
  document.querySelectorAll('a').forEach(a=>{if(a.textContent.trim().startsWith('ปรึกษาเรื่องงาน')){a.href=lineConsult;a.target='_blank';a.rel='noopener noreferrer';}});
- const portfolioLink=document.querySelector('[data-cc="el-88"]');if(portfolioLink?.tagName==='A'){portfolioLink.href='https://www.facebook.com/WellSound24/';portfolioLink.target='_blank';portfolioLink.rel='noopener noreferrer';portfolioLink.className='button outline';const label=[...portfolioLink.childNodes].find(n=>n.nodeType===3);if(label)label.textContent='เยี่ยมชมผลงานทางเพจเฟซบุ๊ก ';}
+ const portfolioLink=document.querySelector('[data-cc="el-88"]');if(portfolioLink?.tagName==='A'){portfolioLink.href='https://www.facebook.com/WellSound24/';portfolioLink.target='_blank';portfolioLink.rel='noopener noreferrer';portfolioLink.className='button';const label=[...portfolioLink.childNodes].find(n=>n.nodeType===3);if(label)label.textContent='เยี่ยมชมผลงานทางเพจเฟซบุ๊ก ';}
+ const facebookContact=document.querySelector('[data-cc="el-123"]');if(facebookContact?.tagName==='A'){facebookContact.href='https://www.facebook.com/WellSound24/';facebookContact.target='_blank';facebookContact.rel='noopener noreferrer';}
  applySEO(document,c,page);
  document.body.setAttribute('data-page',page.slug);
  if(page.slug!=='home'){
