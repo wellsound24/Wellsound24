@@ -2,10 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {parseHTML} from 'linkedom';
-import {contactChannel,recordContactClick} from '../contact-shared.js';
+import {contactChannel,recordContactClick,createContactRecorder} from '../contact-shared.js';
 import {renderPublished} from '../api/site.js';
 import {empty} from '../control-shared.js';
 const template=readFileSync('site-template.html','utf8');
+test('double taps do not inflate conversions, separate channels and later contacts still count',()=>{
+ const {document}=parseHTML('<html><body><div class="mobile-contact"><a href="https://line.me/ti/p/test">LINE</a><a href="tel:0932614296">Phone</a></div></body></html>');
+ const [line,phone]=document.querySelectorAll('a');
+ let time=0;const record=createContactRecorder(()=>time),calls=[],tag=(...args)=>calls.push(args);
+ assert.equal(record(line,undefined),false);
+ assert.equal(record(line,tag),true);
+ time=100;assert.equal(record(line,tag),false);
+ assert.equal(record(phone,tag),true);
+ time=1500;assert.equal(record(line,tag),true);
+ assert.equal(calls.filter(x=>x[1]==='conversion').length,3);
+ assert.equal(calls[0][2].contact_placement,'mobile_bar');
+ assert.equal(JSON.stringify(calls).includes('0932614296'),false);
+});
 test('portfolio Facebook clicks never count as contact conversions',()=>{
  const {document}=parseHTML('<html><body><a class="text-link" href="https://www.facebook.com/WellSound24/">ดูผลงาน</a></body></html>');
  const calls=[];assert.equal(recordContactClick(document.querySelector('a'),(...x)=>calls.push(x)),false);assert.equal(calls.length,0);
