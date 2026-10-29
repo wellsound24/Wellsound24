@@ -15,3 +15,6 @@ body:not([data-page="home"])[data-page] main>h1{font-size:clamp(30px,4vw,56px);l
 #w24-seo-content nav>a{padding:12px 18px;border:1px solid var(--line);font-size:16px}
 #w24-seo-content nav>a:hover{border-color:var(--red)}
 @media(max-width:760px){body:not([data-page="home"])[data-page] main>h1{padding-top:28px}#w24-seo-content nav{display:grid!important;grid-template-columns:1fr}#w24-seo-content nav>a{white-space:normal}}
+
+/* Keep dashboard access at the upper right on every screen size. */
+header .nav-actions{order:3;margin-left:auto}header #main-nav{order:2}header .admin-button{min-height:44px}header .nav{gap:20px}@media(max-width:760px){header .nav{gap:10px}header .admin-button{padding:9px 10px;font-size:12px}}
